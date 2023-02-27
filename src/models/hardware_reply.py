@@ -1,10 +1,16 @@
 import json
+from src.models.json_serializable import JsonSerializable
 
 
-class HardwareReply(object):
-    def __init__(self, id: str, state: int) -> None:
+class HardwareReply(JsonSerializable):
+    def __init__(self, id: str, ok: bool) -> None:
         self.id = id
-        self.state = state
+        self.ok = ok
+
+    @staticmethod
+    def from_json(json_data: str) -> "HardwareReply":
+        data_dict = json.loads(json_data)
+        return HardwareReply(data_dict["id"], data_dict["ok"])
 
     def to_json(self) -> str:
-        return json.dumps(self)
+        return json.dumps({"id": self.id, "ok": self.ok})
