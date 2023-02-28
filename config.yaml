@@ -7,3 +7,6 @@ Sockets:
 RestAPI:
   BaseUrl: "localhost:3000/"
   Port: 3000
+
+Serial:
+  Port: "COM2"

@@ -1,4 +1,3 @@
-import yaml  # type: ignore
 from src.server.constants import (
     CFG_SOCKETS,
     CFG_SOCKET_IP,
@@ -18,8 +17,8 @@ import sys
 
 
 class ServerConnector:
-    def __init__(self, config_path: str) -> None:
-        self.config = self.__load_config(config_path)
+    def __init__(self, config: dict) -> None:
+        self.config = config
         self.pin_map: dict[str, str] = {"test_device": "2"}
 
     def __enter__(self) -> "ServerConnector":
@@ -64,13 +63,6 @@ class ServerConnector:
 
     def __handle_callback_output(self, callback_response: HardwareReply) -> None:
         self.reply_socket.send_data(callback_response)
-
-    def __load_config(self, config_path: str) -> dict:
-        config: dict = {}
-
-        with open(config_path, "r") as config_file:
-            config = yaml.load(config_file, Loader=yaml.FullLoader)
-        return config
 
     def __connect_sockets(self, socket_config: dict) -> tuple[ReceivingSocket[Action], SendingSocket[HardwareReply]]:
         host = socket_config[CFG_SOCKET_IP]
