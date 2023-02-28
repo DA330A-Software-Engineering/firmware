@@ -1,7 +1,7 @@
 from enum import Enum
 
 
-class DeviceTypes(Enum):
+class DeviceType(Enum):
     TOGGLE = 0
     SPEAKER = 1
     WINDOW = 2

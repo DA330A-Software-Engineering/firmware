@@ -1,0 +1,9 @@
+Sockets:
+  Ip: "localhost"
+  ActionPort: 3001
+  ReplyPort: 3002
+  SensorPort: 3003
+  
+RestAPI:
+  BaseUrl: "localhost:3000/"
+  Port: 3000

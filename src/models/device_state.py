@@ -1,10 +1,11 @@
 import json
 from typing import Type, TypeVar
+from src.models.json_serializable import JsonSerializable
 
 T = TypeVar("T", bound="DeviceState")
 
 
-class DeviceState(object):
+class DeviceState(JsonSerializable):
     @classmethod
     def from_json(cls: Type[T], json_data: str) -> T:
         data = json.loads(json_data)
