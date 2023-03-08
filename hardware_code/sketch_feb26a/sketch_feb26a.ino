@@ -48,24 +48,26 @@ void setup()
   pinMode(3, OUTPUT);  // set digital 3 to output
 }
 
-void loop()
-{
-  while (Serial.available())
-  {
-    input = Serial.readString();
-  }
-  if (input != "")
-  {
-    if (getValue(input, ',', 2) == "")
+void loop(){
+    digitalWrite()
+    /*
+    while (Serial.available())
     {
-      stateChange(getValue(input, ',', 0).toInt(), getValue(input, ',', 1).toInt());
+      input = Serial.readString();
     }
-    else
+    if (input != "")
     {
-      stateChange(getValue(input, ',', 0).toInt(), getValue(input, ',', 1).toInt(), getValue(input, ',', 2));
+      if (getValue(input, ',', 2) == "")
+      {
+        stateChange(getValue(input, ',', 0).toInt(), getValue(input, ',', 1).toInt());
+      }
+      else
+      {
+        stateChange(getValue(input, ',', 0).toInt(), getValue(input, ',', 1).toInt(), getValue(input, ',', 2));
+      }
+      input = "";
     }
-    input = "";
-  }
+    */
 }
 
 String getValue(String data, char separator, int index)
@@ -101,13 +103,15 @@ void stateChange(int pin, int state, String state2)
     if (state2 != "")
     {
       fanControl(state, state2.toInt());
+      break;
     }
     else
     {
       fanControl(state);
+      break;
     }
   case 9:
-    // statements
+    doorControl(locked, state);
     break;
   case 10:
     windowControl(locked, state);
@@ -123,10 +127,6 @@ void stateChange(int pin, int state, String state2)
 
 void screenControl(int state, String text)
 {
-  Serial.print("STATE = ");
-  Serial.println(state);
-  Serial.print("TEXT = ");
-  Serial.println(text);
   if (state == 255)
   {
     mylcd.backlight();
@@ -161,7 +161,23 @@ void windowControl(bool locked, int state)
 {
   if (locked)
   {
-    Serial.print("print 'window locked' to screen");
+    screenControl(255, "Error. Locked!");
+    delay(1000);
+    screenControl(255, "Welcome home!")
+  }
+  else
+  {
+    servo_9.write(state);
+  }
+}
+
+void doorControl(bool locked, int state)
+{
+  if (locked)
+  {
+    screenControl(255, "Error. Locked!");
+    delay(1000);
+    screenControl(255, "Welcome home!")
   }
   else
   {
