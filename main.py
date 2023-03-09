@@ -9,7 +9,7 @@ def main() -> None:
     config = load_config("./config.yaml")
 
     with ServerConnector(config) as server:
-        hardware = HardwareConnector(config)
+        hardware = HardwareConnector(config["Serial"])
 
         def received_action_callback(action: Action) -> HardwareReply:
             successful_change = hardware.submit_state(

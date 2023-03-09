@@ -1,8 +1,10 @@
 import json
-from typing import Type, TypeVar
+from typing import Type, TypeVar, Any
+from src.models.device_types import DeviceType
 from src.models.json_serializable import JsonSerializable
 
 T = TypeVar("T", bound="DeviceState")
+G = TypeVar("G")
 
 
 class DeviceState(JsonSerializable):
@@ -11,8 +13,68 @@ class DeviceState(JsonSerializable):
         data = json.loads(json_data)
         return cls(**data)
 
+    @classmethod
+    def from_list(cls: Type[T], state_list: list[str], type: DeviceType) -> T:
+        # Create a dictionary mapping attribute names to their values
+        state_dict = {}
+
+        for i, val in enumerate(state_list):
+            if val != "-1":
+                attr_name = type.attribute_names[i]
+                attr_value = type.attribute_types[i](val)
+                state_dict[attr_name] = attr_value
+
+        # Create a new instance of the DeviceState subclass using the dictionary
+        if type == DeviceType.TOGGLE:
+            return ToggleState(**state_dict)  # type: ignore
+        elif type == DeviceType.DOOR:
+            return DoorState(**state_dict)  # type: ignore
+        elif type == DeviceType.WINDOW:
+            return WindowState(**state_dict)  # type: ignore
+        elif type == DeviceType.DISPLAY:
+            return DisplayState(**state_dict)  # type: ignore
+        elif type == DeviceType.SPEAKER:
+            return SpeakerState(**state_dict)  # type: ignore
+        else:
+            raise ValueError("Invalid device type")
+
     def to_json(self) -> str:
         return json.dumps(self)
+
+    def to_list(self) -> list[str]:
+        state_list = []
+        for attr, value in self.__dict__.items():
+            if value is None:
+                state_list.append("-1")
+            else:
+                state_list.append(self.value_to_str(value))
+
+        return state_list
+
+    def value_to_str(self, value: Any) -> str:
+        if isinstance(value, bool):
+            return str(255 if value else 0)
+
+        return str(value)
+
+    def value_from_str(self, string_val: str, expected_type: Any) -> Any:
+        if expected_type == bool:
+            return True if int(string_val) == 255 else False
+
+        return string_val
+
+    def __eq__(self, __o: object) -> bool:
+        if not isinstance(__o, DeviceState):
+            return False
+
+        own_state = self.__dict__.values()
+        other_state = list(__o.__dict__.values())
+
+        for i, val in enumerate(own_state):
+            if val != other_state[i]:
+                return False
+
+        return True
 
 
 class ToggleState(DeviceState):

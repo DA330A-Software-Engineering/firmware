@@ -19,7 +19,7 @@ import sys
 class ServerConnector:
     def __init__(self, config: dict) -> None:
         self.config = config
-        self.pin_map: dict[str, str] = {"test_device": "2"}
+        self.pin_map: dict[str, str] = {"light_yellow": "5", "light_white": "13"}
 
     def __enter__(self) -> "ServerConnector":
         try:
@@ -44,8 +44,6 @@ class ServerConnector:
 
         self.action_socket.stop().close()
         self.reply_socket.close()
-
-        sys.exit()
 
     def run_action_socket(self, callbacks: list[Callable[[Action], HardwareReply]]) -> None:
         assert callbacks is not None, "[ServerConnector] Cannot run action socket without at least one callback."

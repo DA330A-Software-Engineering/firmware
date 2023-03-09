@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .device_state import DeviceState, ToggleState, DisplayState, DoorState, SpeakerState, WindowState
 from .device_types import DeviceType
 from src.models.json_serializable import JsonSerializable
@@ -12,7 +13,7 @@ class Action(JsonSerializable, object):
         self.type = type
 
     @staticmethod
-    def from_json(json_data: str) -> "Action":
+    def from_json(json_data: str) -> Action:
         data_dict = json.loads(json_data)
 
         device_type = DeviceType(int(data_dict["type"]))
