@@ -10,3 +10,5 @@ RestAPI:
 
 Serial:
   Port: "COM2"
+  baud_rate: "9600"
+  timeout: "0.5"
