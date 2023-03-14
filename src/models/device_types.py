@@ -10,6 +10,22 @@ class DeviceType(Enum):
     DISPLAY = 3
     DOOR = 4
 
+    @classmethod
+    def from_str(cls, str_val: str) -> "DeviceType":
+        match str_val:
+            case "toggle":
+                return cls.TOGGLE
+            case "speaker":
+                return cls.SPEAKER
+            case "window":
+                return cls.WINDOW
+            case "display":
+                return cls.DISPLAY
+            case "door":
+                return cls.DOOR
+            case _:
+                raise ValueError("Invalid device type")
+
     # def default_state(self) -> "DeviceState":
     #     if self == DeviceType.TOGGLE:
     #         return ToggleState(False)

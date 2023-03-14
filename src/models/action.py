@@ -16,7 +16,7 @@ class Action(JsonSerializable, object):
     def from_json(json_data: str) -> Action:
         data_dict = json.loads(json_data)
 
-        device_type = DeviceType(int(data_dict["type"]))
+        device_type = DeviceType.from_str(data_dict["type"])
 
         state_object = data_dict["state"]
 
@@ -39,7 +39,10 @@ class Action(JsonSerializable, object):
             {
                 "id": self.id,
                 "deviceId": self.device_id,
-                "type": self.type.value,
+                "type": self.type.name,
                 "state": self.state.to_json(),
             }
         )
+
+    def __str__(self) -> str:
+        return str(self.__dict__)

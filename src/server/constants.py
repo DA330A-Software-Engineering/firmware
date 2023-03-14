@@ -1,8 +1,7 @@
 CFG_SOCKETS = "Sockets"
-CFG_SOCKET_IP = "Ip"
-CFG_ACTION_SOCKET = "ActionPort"
-CFG_REPLY_SOCKET = "ReplyPort"
-CFG_SENSOR_SOCKET = "SensorPort"
+CFG_ACTION_SOCKET = "Action"
+CFG_REPLY_SOCKET = "Reply"
+CFG_SENSOR_SOCKET = "Sensor"
 
 CFG_REST_API = "RestAPI"
 CFG_REST_API_BASE_IP = "BaseUrl"
