@@ -7,10 +7,13 @@ LiquidCrystal_I2C mylcd(0x27, 16, 2);
 // set ports of two servos to digital 9 and 10
 Servo servo_10;
 Servo servo_9;
-volatile bool locked = true;
+bool windowLock;
+bool doorLock;
 void fanControl(int state, int rotation = 255);
 void stateChange(int pin, int state, String state2 = "");
 void screenControl(int state, String text = "");
+void doorControl(int state, int lockedState= -1);
+void windowControl(int state, int lockedState= -1);
 String input;
 bool screenOff;
 
@@ -49,8 +52,6 @@ void setup()
 }
 
 void loop(){
-    digitalWrite()
-    /*
     while (Serial.available())
     {
       input = Serial.readString();
@@ -67,11 +68,9 @@ void loop(){
       }
       input = "";
     }
-    */
 }
 
-String getValue(String data, char separator, int index)
-{
+String getValue(String data, char separator, int index){
   int found = 0;
   int strIndex[] = {0, -1};
   int maxIndex = data.length() - 1;
@@ -111,10 +110,10 @@ void stateChange(int pin, int state, String state2)
       break;
     }
   case 9:
-    doorControl(locked, state);
+    doorControl(state, state2.toInt());
     break;
   case 10:
-    windowControl(locked, state);
+    windowControl(state, state2.toInt());
     break;
   case 13:
     lightControl(pin, state);
@@ -125,8 +124,7 @@ void stateChange(int pin, int state, String state2)
   }
 }
 
-void screenControl(int state, String text)
-{
+void screenControl(int state, String text){
   if (state == 255)
   {
     mylcd.backlight();
@@ -134,7 +132,6 @@ void screenControl(int state, String text)
   else if (state == 0)
   {
     mylcd.noBacklight();
-    Serial.print("reached");
   }
 
   if (text != "")
@@ -147,49 +144,85 @@ void screenControl(int state, String text)
 
 void lightControl(int pin, int state)
 {
+  String returnMessage;
   if (state == 255)
   {
     digitalWrite(pin, HIGH);
+    if(digitalRead(pin) == HIGH){
+      returnMessage = pin;
+      returnMessage += ",";
+      returnMessage += state;
+      Serial.println(returnMessage);
+    }
+
   }
   else
   {
     digitalWrite(pin, LOW);
+    if(digitalRead(pin) == LOW){
+      returnMessage = pin;
+      returnMessage += ",";
+      returnMessage += state;
+      Serial.println(returnMessage);
+    }
   }
 }
 
-void windowControl(bool locked, int state)
+void windowControl(int state, int lockedState)
 {
-  if (locked)
+    if(lockedState != "-1"){
+      if(lockedState == 255){
+        windowLock = true;
+      }
+    else if (lockedState ==0){
+      windowLock = false;
+    }
+  }
+  if (windowLock)
   {
     screenControl(255, "Error. Locked!");
     delay(1000);
-    screenControl(255, "Welcome home!")
+    screenControl(255, "Welcome home!");
   }
   else
   {
-    servo_9.write(state);
+    if(state != -1){
+      servo_10.write(state);
+    }
   }
+  Serial.println(state);
+  Serial.println(lockedState);
 }
 
-void doorControl(bool locked, int state)
+void doorControl(int state, int lockedState)
 {
-  if (locked)
+  if(lockedState != "-1"){
+    if(lockedState == 255){
+      doorLock = true;
+    }
+    else if (lockedState == 0){
+      doorLock = false;
+    }
+  }
+  if (doorLock == 1)
   {
     screenControl(255, "Error. Locked!");
     delay(1000);
-    screenControl(255, "Welcome home!")
+    screenControl(255, "Welcome home!");
   }
   else
   {
-    servo_9.write(state);
+    if(state != -1 && doorLock != true){
+      servo_9.write(state);
+    }
   }
+  Serial.println(state);
+  Serial.println(lockedState);
+  Serial.println(doorLock);
 }
 
 void fanControl(int state, int rotation)
 {
-  Serial.print(state);
-  Serial.print(" ");
-  Serial.println(rotation);
   if ((state == 255) && (rotation == 255))
   {
     digitalWrite(7, HIGH);
