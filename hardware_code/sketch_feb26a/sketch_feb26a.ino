@@ -7,16 +7,24 @@ LiquidCrystal_I2C mylcd(0x27, 16, 2);
 // set ports of two servos to digital 9 and 10
 Servo servo_10;
 Servo servo_9;
-volatile bool locked = true;
+volatile bool windowLock;
+volatile bool doorLock;
+volatile int previousMotion;
+volatile int previousPhotocell;
+volatile int previousSteam;
+volatile int previousSoil;
+volatile int previousGas;
 void fanControl(int state, int rotation = 255);
 void stateChange(int pin, int state, String state2 = "");
 void screenControl(int state, String text = "");
+void doorControl(int state, int lockedState = -1);
+void windowControl(int state, int lockedState= -1);
 String input;
 bool screenOff;
 
 void setup()
 {
-  Serial.begin(9600); // set baud rate to 9600
+  Serial.begin(115200); // set baud rate to 9600
 
   mylcd.init();
   mylcd.backlight(); // initialize LCD
@@ -46,11 +54,11 @@ void setup()
   pinMode(12, OUTPUT); // set digital 12 to output
   pinMode(5, OUTPUT);  // set digital 5 to output
   pinMode(3, OUTPUT);  // set digital 3 to output
+  
 }
 
 void loop(){
-    digitalWrite()
-    /*
+
     while (Serial.available())
     {
       input = Serial.readString();
@@ -67,11 +75,131 @@ void loop(){
       }
       input = "";
     }
-    */
+    sensorChecker();
+
 }
 
-String getValue(String data, char separator, int index)
-{
+void sensorChecker(){
+  previousPhotocell = analogRead(A1);
+  previousMotion = digitalRead(2);
+  previousSteam = analogRead(A3);
+  previousSoil = analogRead(A2);
+  previousGas = analogRead(A0);
+  delay(1000);
+  if (abs(previousPhotocell-analogRead(A1)) > 200){
+  String returnMessage;
+    returnMessage = "A1";
+    returnMessage += ",";
+    returnMessage += analogRead(A1);
+    Serial.println(returnMessage);
+  }
+  
+  if (digitalRead(2) != previousMotion){
+  String returnMessage;
+      returnMessage = 2;
+      returnMessage += ",";
+      returnMessage += digitalRead(2);
+      Serial.println(returnMessage);
+  }
+  
+
+  if (abs(previousSteam-analogRead(A3)) > 200){
+  String returnMessage;
+    returnMessage = "A3";
+    returnMessage += ",";
+    returnMessage += analogRead(A3);
+    Serial.println(returnMessage);
+  }
+
+  
+
+  if (abs(previousSoil-analogRead(A2)) > 100){
+  String returnMessage;
+    returnMessage = "A2";
+    returnMessage += ",";
+    returnMessage += analogRead(A2);
+    Serial.println(returnMessage);
+  }
+
+
+  if (abs(previousGas-analogRead(A0)) > 100){
+    String returnMessage;
+    returnMessage = "A0";
+    returnMessage += ",";
+    returnMessage += analogRead(A0);
+    Serial.println(returnMessage);
+  }
+
+}
+
+/*
+void photocellSensor(){
+  
+  previousPhotocell = analogRead(A1);
+  delay(250);
+  if (abs(previousPhotocell-analogRead(A1)) > 200){
+    String returnMessage;
+    returnMessage = "A1";
+    returnMessage += ",";
+    returnMessage += analogRead(A1);
+    Serial.println(returnMessage);
+  }
+}
+
+void motionSensor(){
+  String returnMessage;
+  previousMotion = digitalRead(2);
+  delay(100);
+  if (digitalRead(2) != previousMotion){
+      returnMessage = 2;
+      returnMessage += ",";
+      returnMessage += digitalRead(2);
+      Serial.println(returnMessage);
+  }
+}
+
+void steamSensor(){
+  String returnMessage;
+
+  previousSteam = analogRead(A3);
+  delay(250);
+  if (abs(previousSteam-analogRead(A3)) > 200){
+    returnMessage = "A3";
+    returnMessage += ",";
+    returnMessage += analogRead(A3);
+    Serial.println(returnMessage);
+  }
+}
+
+void soilSensor(){
+  String returnMessage;
+
+  previousSoil = analogRead(A2);
+  delay(250);
+  if (abs(previousSoil-analogRead(A2)) > 100){
+    returnMessage = "A2";
+    returnMessage += ",";
+    returnMessage += analogRead(A2);
+    Serial.println(returnMessage);
+  }
+}
+
+void gasSensor(){
+  String returnMessage;
+
+  previousGas = analogRead(A0);
+  delay(500);
+  if (abs(previousGas-analogRead(A0)) > 100){
+    returnMessage = "A0";
+    returnMessage += ",";
+    returnMessage += analogRead(A0);
+    Serial.println(returnMessage);
+  }
+}
+
+*/
+
+String getValue(String data, char separator, int index){
   int found = 0;
   int strIndex[] = {0, -1};
   int maxIndex = data.length() - 1;
@@ -94,7 +222,7 @@ void stateChange(int pin, int state, String state2)
   switch (pin)
   {
   case 3:
-    // statements
+    buzzerControl(state, state2.toInt());
     break;
   case 5:
     lightControl(pin, state);
@@ -111,10 +239,15 @@ void stateChange(int pin, int state, String state2)
       break;
     }
   case 9:
-    doorControl(locked, state);
+    if(state2 != ""){
+      doorControl(state, state2.toInt());
+    }
+    else{
+      doorControl(state);
+    }
     break;
   case 10:
-    windowControl(locked, state);
+    windowControl(state, state2.toInt());
     break;
   case 13:
     lightControl(pin, state);
@@ -125,8 +258,13 @@ void stateChange(int pin, int state, String state2)
   }
 }
 
-void screenControl(int state, String text)
-{
+void buzzerControl(int duration, int frequency){
+  tone(3, frequency);
+  delay(duration);
+  noTone(3);
+}
+
+void screenControl(int state, String text){
   if (state == 255)
   {
     mylcd.backlight();
@@ -134,7 +272,6 @@ void screenControl(int state, String text)
   else if (state == 0)
   {
     mylcd.noBacklight();
-    Serial.print("reached");
   }
 
   if (text != "")
@@ -147,49 +284,92 @@ void screenControl(int state, String text)
 
 void lightControl(int pin, int state)
 {
+  String returnMessage;
   if (state == 255)
   {
     digitalWrite(pin, HIGH);
+    if(digitalRead(pin) == HIGH){
+      returnMessage = pin;
+      returnMessage += ",";
+      returnMessage += state;
+      Serial.println(returnMessage);
+    }
+
   }
   else
   {
     digitalWrite(pin, LOW);
+    if(digitalRead(pin) == LOW){
+      returnMessage = pin;
+      returnMessage += ",";
+      returnMessage += state;
+      Serial.println(returnMessage);
+    }
   }
 }
 
-void windowControl(bool locked, int state)
+void windowControl(int state, int lockedState)
 {
-  if (locked)
+  if(lockedState != -1){
+    windowLock = lockedState;
+    Serial.print("lockedState = ");
+    Serial.println(lockedState);
+    Serial.print("doorLock = ");
+    Serial.println(doorLock);
+
+  }
+  if (windowLock == 1)
   {
     screenControl(255, "Error. Locked!");
     delay(1000);
-    screenControl(255, "Welcome home!")
+    screenControl(255, "Welcome home!");
   }
-  else
+  else if (windowLock == 0)
   {
-    servo_9.write(state);
+    if(state != -1 && state != -1){
+      servo_9.write(state);
+    }
   }
+    Serial.print("State = ");
+    Serial.println(state);
+    Serial.print("lockedState = ");
+    Serial.println(lockedState);
+    Serial.print("doorLock = ");
+    Serial.println(doorLock);
 }
 
-void doorControl(bool locked, int state)
+void doorControl(int state, int lockedState)
 {
-  if (locked)
+  if(lockedState != -1){
+    doorLock = lockedState;
+    Serial.print("lockedState = ");
+    Serial.println(lockedState);
+    Serial.print("doorLock = ");
+    Serial.println(doorLock);
+
+  }
+  if (doorLock == 1)
   {
     screenControl(255, "Error. Locked!");
     delay(1000);
-    screenControl(255, "Welcome home!")
+    screenControl(255, "Welcome home!");
   }
-  else
+  else if (doorLock == 0)
   {
-    servo_9.write(state);
+    if(state != -1 && state != -1){
+      servo_9.write(state);
+    }
   }
+    Serial.print("State = ");
+    Serial.println(state);
+    Serial.print("lockedState = ");
+    Serial.println(lockedState);
+    Serial.print("doorLock = ");
+    Serial.println(doorLock);
 }
 
 void fanControl(int state, int rotation)
 {
-  Serial.print(state);
-  Serial.print(" ");
-  Serial.println(rotation);
   if ((state == 255) && (rotation == 255))
   {
     digitalWrite(7, HIGH);
