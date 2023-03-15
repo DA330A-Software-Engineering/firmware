@@ -1,26 +1,31 @@
 from src.models.action import Action
 from src.models.hardware_reply import HardwareReply
 from src.server.server_connector import ServerConnector
-from src.hardware_connector.hardware_connector_placeholder import HardwareConnector
+
+# from src.hardware_connector.hardware_connector_placeholder import HardwareConnector
 import yaml  # type: ignore
+from tornado.ioloop import IOLoop
 
 
 def main() -> None:
     config = load_config("./config.yaml")
 
-    with ServerConnector(config) as server:
-        hardware = HardwareConnector(config["Serial"])
+    server = ServerConnector(config)
+    # hardware = HardwareConnector(config["Serial"])
 
-        def received_action_callback(action: Action) -> HardwareReply:
-            successful_change = hardware.submit_state(
-                pin=server.pin_map[action.device_id],
-                type=action.type,
-                state=action.state,
-            )
+    def received_action_callback(action: Action) -> HardwareReply:
+        # successful_change = hardware.submit_state(
+        #     pin=server.pin_map[action.device_id],
+        #     type=action.type,
+        #     state=action.state,
+        # )
+        # print(action.__dict__)
 
-            return HardwareReply(action.id, successful_change)
+        return HardwareReply(action.id, True)
 
-        server.run_action_socket([received_action_callback])
+    server.add_action_listener(received_action_callback)
+
+    IOLoop.current().start()
 
 
 def load_config(config_path: str) -> dict:
