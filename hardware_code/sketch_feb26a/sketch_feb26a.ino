@@ -75,7 +75,10 @@ void loop(){
       }
       input = "";
     }
-    sensorChecker();
+    
+    while(Serial.available() == false){
+      sensorChecker();
+    }
 
 }
 
@@ -85,7 +88,7 @@ void sensorChecker(){
   previousSteam = analogRead(A3);
   previousSoil = analogRead(A2);
   previousGas = analogRead(A0);
-  delay(1000);
+  delay(500);
   if (abs(previousPhotocell-analogRead(A1)) > 200){
   String returnMessage;
     returnMessage = "A1";
@@ -131,6 +134,7 @@ void sensorChecker(){
   }
 
 }
+
 
 /*
 void photocellSensor(){
@@ -327,15 +331,20 @@ void windowControl(int state, int lockedState)
   else if (windowLock == 0)
   {
     if(state != -1 && state != -1){
-      servo_9.write(state);
+      if(state == 255){
+        servo_10.write(120);
+      }
+      else{
+        servo_10.write(0);
+      }
     }
   }
     Serial.print("State = ");
     Serial.println(state);
     Serial.print("lockedState = ");
     Serial.println(lockedState);
-    Serial.print("doorLock = ");
-    Serial.println(doorLock);
+    Serial.print("windowLock = ");
+    Serial.println(windowLock);
 }
 
 void doorControl(int state, int lockedState)
