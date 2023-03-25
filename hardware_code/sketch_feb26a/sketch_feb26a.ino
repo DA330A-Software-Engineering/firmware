@@ -349,6 +349,7 @@ void windowControl(int state, int lockedState)
 
 void doorControl(int state, int lockedState)
 {
+  String returnMessage;
   if(lockedState != -1){
     doorLock = lockedState;
     Serial.print("lockedState = ");
@@ -362,19 +363,25 @@ void doorControl(int state, int lockedState)
     screenControl(255, "Error. Locked!");
     delay(1000);
     screenControl(255, "Welcome home!");
+    returnMessage = "9";
+    returnMessage += ",";
+    returnMessage += state;
+    returnMessage += ",";
+    returnMessage += "255";
+    Serial.println(returnMessage);
   }
   else if (doorLock == 0)
   {
-    if(state != -1 && state != -1){
+    if(state != -1){
       servo_9.write(state);
     }
+    returnMessage = "9";
+    returnMessage += ",";
+    returnMessage += state;
+    returnMessage += ",";
+    returnMessage += "0";
+    Serial.println(returnMessage);
   }
-    Serial.print("State = ");
-    Serial.println(state);
-    Serial.print("lockedState = ");
-    Serial.println(lockedState);
-    Serial.print("doorLock = ");
-    Serial.println(doorLock);
 }
 
 void fanControl(int state, int rotation)
