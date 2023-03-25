@@ -17,7 +17,7 @@ class ServerConnector:
         self.config = config
         self.action_socket = DeviceSocket(config[CFG_SOCKETS][CFG_ACTION_SOCKET], 2000)
         self.reply_socket = DeviceSocket(config[CFG_SOCKETS][CFG_REPLY_SOCKET], 2000)
-        self.pin_map: dict[str, str] = {"x7IPsBEJXCTgYUdQTHcp": "5"}
+        self.pin_map: dict[str, str] = {"x7IPsBEJXCTgYUdQTHcp": "5", "ZWWXeIWjAVXQbMXzTzF6": "9"}
 
         # try:
         #     self.pin_map = self.__fetch_master_pin_list(self.config[CFG_REST_API])

@@ -1,3 +1,4 @@
+from src.hardware_connector.hardware_connector_placeholder import HardwareConnector
 from src.models.action import Action
 from src.models.hardware_reply import HardwareReply
 from src.server.server_connector import ServerConnector
@@ -11,17 +12,18 @@ def main() -> None:
     config = load_config("./config.yaml")
 
     server = ServerConnector(config)
-    # hardware = HardwareConnector(config["Serial"])
+    hardware = HardwareConnector(config["Serial"])
 
     def received_action_callback(action: Action) -> HardwareReply:
-        # successful_change = hardware.submit_state(
-        #     pin=server.pin_map[action.device_id],
-        #     type=action.type,
-        #     state=action.state,
-        # )
-        # print(action.__dict__)
+        successful_change = hardware.submit_state(
+            pin=server.pin_map[action.device_id],
+            type=action.type,
+            state=action.state,
+        )
+        print(action.__dict__)
+        print(successful_change)
 
-        return HardwareReply(action.id, True)
+        return HardwareReply(action.id, successful_change)
 
     server.add_action_listener(received_action_callback)
 
