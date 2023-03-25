@@ -1,5 +1,6 @@
 import json
 from typing import Type, TypeVar, Any
+from src.hardware_connector.util import value_from_str
 from src.models.device_types import DeviceType
 from src.models.json_serializable import JsonSerializable
 
@@ -19,10 +20,12 @@ class DeviceState(JsonSerializable):
         state_dict = {}
 
         for i, val in enumerate(state_list):
+            print(val)
             if val != "-1":
                 attr_name = type.attribute_names[i]
-                attr_value = type.attribute_types[i](val)
-                state_dict[attr_name] = attr_value
+                print(attr_name)
+                state_dict[attr_name] = value_from_str(val, type.attribute_types[i])
+                print(value_from_str(val, type.attribute_types[i]))
 
         # Create a new instance of the DeviceState subclass using the dictionary
         if type == DeviceType.TOGGLE:
@@ -44,6 +47,7 @@ class DeviceState(JsonSerializable):
     def to_list(self) -> list[str]:
         state_list = []
         for attr, value in self.__dict__.items():
+            print(attr, value)
             if value is None:
                 state_list.append("-1")
             else:
@@ -71,6 +75,9 @@ class DeviceState(JsonSerializable):
         other_state = list(__o.__dict__.values())
 
         for i, val in enumerate(own_state):
+            if val is None or other_state[i] is None:
+                continue
+
             if val != other_state[i]:
                 return False
 
@@ -83,22 +90,22 @@ class ToggleState(DeviceState):
 
 
 class DoorState(DeviceState):
-    def __init__(self, open: bool | None, locked: bool | None):
+    def __init__(self, open: bool | None = None, locked: bool | None = None):
         self.open = open
         self.locked = locked
 
 
 class WindowState(DeviceState):
-    def __init__(self, open: bool | None):
+    def __init__(self, open: bool | None = None):
         self.open = open
 
 
 class DisplayState(DeviceState):
-    def __init__(self, on: bool | None, text: str | None):
+    def __init__(self, on: bool | None = None, text: str | None = None):
         self.on = on
         self.text = text
 
 
 class SpeakerState(DeviceState):
-    def __init__(self, duration: str | None):
+    def __init__(self, duration: str | None = None):
         self.duration = duration

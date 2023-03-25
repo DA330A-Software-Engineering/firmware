@@ -33,18 +33,19 @@ class HardwareConnector:
         state_str = ",".join([str(pin)] + state_list)
 
         # Send comma string to serial
-
         self.serial.write(state_str.encode())
         # self.on_send(state_str)
 
         # Receive or get state to check it has updated correctly
         response = self.serial.readline().decode().strip()
-        while response == "":
+        while pin not in response:
             response = self.serial.readline().decode().strip()
         print(response)
         # self.on_receive(response)
 
         new_set_state = DeviceState.from_list(response.split(",")[1:], type)
+        print(new_set_state.__dict__)
+        print(state.__dict__)
 
         return new_set_state == state
 
