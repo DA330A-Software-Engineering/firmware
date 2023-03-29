@@ -9,20 +9,24 @@ class DeviceType(Enum):
     WINDOW = 2
     DISPLAY = 3
     DOOR = 4
+    BUZZER = 5
+    FAN = 6
 
     @classmethod
     def from_str(cls, str_val: str) -> "DeviceType":
         match str_val:
             case "toggle":
                 return cls.TOGGLE
-            case "speaker":
+            case "buzzer":
                 return cls.SPEAKER
             case "window":
                 return cls.WINDOW
-            case "display":
+            case "screen":
                 return cls.DISPLAY
             case "door":
                 return cls.DOOR
+            case "fan":
+                return cls.FAN
             case _:
                 raise ValueError("Invalid device type")
 

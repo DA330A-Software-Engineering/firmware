@@ -4,7 +4,7 @@ Sockets:
   Sensor: 'ws://localhost:3003'
   
 RestAPI:
-  BaseUrl: "http://localhost:3000/"
+  BaseUrl: "http://localhost:3000"
   Port: 3000
 
 Serial:

@@ -1,7 +1,7 @@
 from src.models.device_types import DeviceType
-from src.models.device_state import DeviceState, ToggleState
+from src.models.device_state import DeviceState
 from typing import Callable
-import serial
+import serial  # type: ignore
 import time
 
 
