@@ -107,5 +107,11 @@ class DisplayState(DeviceState):
 
 
 class SpeakerState(DeviceState):
-    def __init__(self, duration: str | None = None):
+    def __init__(self, frequency: int | None = None, duration: int | None = None):
         self.duration = duration
+        self.frequency = frequency
+
+
+class FanState(DeviceState):
+    def __init__(self, on: bool | None = None, reverse: bool | None = None) -> None:
+        super().__init__()

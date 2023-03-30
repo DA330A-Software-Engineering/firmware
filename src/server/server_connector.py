@@ -1,9 +1,11 @@
+from src.models.device_state import DeviceState
 from src.server.constants import (
     CFG_SOCKETS,
     CFG_ACTION_SOCKET,
     CFG_REPLY_SOCKET,
     CFG_REST_API,
     CFG_REST_API_BASE_IP,
+    CFG_SENSOR_SOCKET,
 )  # noqa
 from src.server.device_socket import DeviceSocket
 from src.models.action import Action
@@ -17,13 +19,14 @@ class ServerConnector:
         self.config = config
         self.action_socket = DeviceSocket(config[CFG_SOCKETS][CFG_ACTION_SOCKET], 2000)
         self.reply_socket = DeviceSocket(config[CFG_SOCKETS][CFG_REPLY_SOCKET], 2000)
-        self.pin_map: dict[str, str] = {"x7IPsBEJXCTgYUdQTHcp": "5", "ZWWXeIWjAVXQbMXzTzF6": "9"}
+        self.sensor_socket = DeviceSocket(config[CFG_SOCKETS][CFG_SENSOR_SOCKET], 2000)
+        self.pin_map: dict[str, int] = {}
 
-        # try:
-        #     self.pin_map = self.__fetch_master_pin_list(self.config[CFG_REST_API])
-        # except requests.exceptions.RequestException as e:
-        #     print("[ServerConnector] Caught exception while attempting to fetch master map of pins")
-        #     raise e
+        try:
+            self.pin_map = self.__fetch_master_pin_list(self.config[CFG_REST_API])["devices"]
+        except requests.exceptions.RequestException as e:
+            print("[ServerConnector] Caught exception while attempting to fetch master map of pins")
+            raise e
 
     def add_action_listener(self, action_socket_listener: Callable[[Action], HardwareReply]):
         def wrapper(action_json: str):
@@ -37,10 +40,13 @@ class ServerConnector:
     def send_response(self, response: HardwareReply) -> None:
         self.reply_socket.broadcast(response)
 
-    def __fetch_master_pin_list(self, rest_config: dict) -> dict[str, str]:
+    def send_sensor_update(self, sensor_status: DeviceState) -> None:
+        self.sensor_socket.broadcast(sensor_status)
+
+    def __fetch_master_pin_list(self, rest_config: dict) -> dict[str, dict[str, int]]:
         host = rest_config[CFG_REST_API_BASE_IP]
 
-        response = requests.get(host, timeout=5)
+        response = requests.get(f"{host}/hw/pins", timeout=5)
         response.raise_for_status()
 
         return response.json()

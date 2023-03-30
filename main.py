@@ -16,7 +16,7 @@ def main() -> None:
 
     def received_action_callback(action: Action) -> HardwareReply:
         successful_change = hardware.submit_state(
-            pin=server.pin_map[action.device_id],
+            pin=str(server.pin_map[action.device_id]),
             type=action.type,
             state=action.state,
         )
