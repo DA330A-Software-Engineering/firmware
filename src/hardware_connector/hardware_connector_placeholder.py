@@ -10,7 +10,7 @@ class HardwareConnector:
         self,
         config: dict,
         on_receive: Callable[[str], None] | None = None,
-        on_send: Callable[[str], None] | None = None,
+        on_send: Callable[[int, int], None] | None = None,
     ) -> None:
         self.config = config
         self.on_receive = on_receive

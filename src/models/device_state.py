@@ -107,9 +107,8 @@ class DisplayState(DeviceState):
 
 
 class SpeakerState(DeviceState):
-    def __init__(self, frequency: int | None = None, duration: int | None = None):
-        self.duration = duration
-        self.frequency = frequency
+    def __init__(self, tune: str):
+        self.tune = tune
 
 
 class FanState(DeviceState):
