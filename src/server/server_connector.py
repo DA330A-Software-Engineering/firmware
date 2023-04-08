@@ -1,4 +1,4 @@
-from src.models.device_state import DeviceState
+from src.models.sensor_state import SensorState
 from src.server.constants import (
     CFG_SOCKETS,
     CFG_ACTION_SOCKET,
@@ -6,7 +6,7 @@ from src.server.constants import (
     CFG_REST_API,
     CFG_REST_API_BASE_IP,
     CFG_SENSOR_SOCKET,
-)  # noqa
+)
 from src.server.device_socket import DeviceSocket
 from src.models.action import Action
 from src.models.hardware_reply import HardwareReply
@@ -40,7 +40,7 @@ class ServerConnector:
     def send_response(self, response: HardwareReply) -> None:
         self.reply_socket.broadcast(response)
 
-    def send_sensor_update(self, sensor_status: DeviceState) -> None:
+    def send_sensor_update(self, sensor_status: SensorState) -> None:
         self.sensor_socket.broadcast(sensor_status)
 
     def __fetch_master_pin_list(self, rest_config: dict) -> dict[str, dict[str, int]]:
