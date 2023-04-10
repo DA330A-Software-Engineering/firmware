@@ -1,6 +1,7 @@
+from ast import Tuple
 from src.models.device_types import DeviceType
 from src.models.device_state import DeviceState
-from typing import Callable
+from typing import Callable, Optional
 import serial  # type: ignore
 import time
 
@@ -72,3 +73,79 @@ class HardwareConnector:
         return state_obj
 
         # return ToggleState(False)
+
+    
+    def get_sensor_data(self) -> Optional[Tuple[str, int]]:
+        command = "get_sensor_data"
+        self.serial.write(command.encode())
+        
+        time.sleep(0.1)
+        response = self.serial.readline().decode().strip()
+        
+        if "," in response:
+            pin_num, value_str = response.split(",")
+            value = int(value_str)
+            return (pin_num, value)
+        else:
+            return None
+
+    # def get_sensor_data(self, sensor_id: str) -> Optional[Tuple[str, float]]:
+    #     command = f"get_sensor_data,{sensor_id}"
+    #     self.serial.write(command.encode())
+        
+    #     time.sleep(0.1)
+    #     response = self.serial.readline().decode().strip()
+        
+    #     if "," in response:
+    #         pin_num, value_str = response.split(",")
+    #         value = float(value_str)
+    #         return (pin_num, value)
+    #     else:
+    #         return None
+        
+    
+    # def get_sensor_data_cb(self, sensor_pin_number: int, callback: Callable[[str, float], None]) -> None:
+    
+    #  command = f"get_sensor_data,{sensor_pin_number}"
+    #  self.serial.write(command.encode())
+
+    #  time.sleep(0.1)
+    #  response = self.serial.readline().decode().strip()
+
+    #  pin_num, value_str = response.split(",")
+    #  value = float(value_str)
+    #  callback(str(pin_num), value)
+
+
+    
+    # def get_sensor_data(self, sensor_id: str) -> Optional[float]:
+    #     pin_num = None
+    #     if sensor_id == "photocell":
+    #         pin_num = "A1"
+    #     elif sensor_id == "motion":
+    #         pin_num = 2
+    #     elif sensor_id == "steam":
+    #         pin_num = "A3"
+    #     elif sensor_id == "soil":
+    #         pin_num = "A2"
+    #     elif sensor_id == "gas":
+    #         pin_num = "A0"
+    #     else:
+    #         return None  
+
+    
+    #     command = f"get_sensor_data,{pin_num}"
+    #     self.serial.write(command.encode())
+
+    
+    #     time.sleep(0.1)
+    #     response = self.serial.readline().decode().strip()
+
+    
+    #     try:
+    #         _, value_str = response.split(":")
+    #         value = float(value_str)
+    #         return value
+    #     except (ValueError, TypeError):
+    #         return None 
+
