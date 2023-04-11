@@ -11,16 +11,17 @@ class HardwareConnector:
         self,
         config: dict,
         on_receive: Callable[[str], None] | None = None,
-        on_send: Callable[[int, int], None] | None = None,
+        on_send: Callable[[str, float], None] | None = None,
     ) -> None:
         self.config = config
         self.on_receive = on_receive
-        # self.on_send = on_send
+        self.on_send = on_send
         self.serial = serial.Serial(
             port=self.config["Port"],
             baudrate=self.config["baud_rate"],
             timeout=float(self.config["timeout"]),
         )
+        self.action_in_progress = False
 
     def submit_state(self, pin: str, type: DeviceType, state: DeviceState) -> bool:
         # ! turn state into list of str (0-255 if bool or number)
@@ -37,12 +38,16 @@ class HardwareConnector:
         self.serial.write(state_str.encode())
         # self.on_send(state_str)
 
+        self.action_in_progress = True
+
         # Receive or get state to check it has updated correctly
         response = self.serial.readline().decode().strip()
         while pin not in response:
             response = self.serial.readline().decode().strip()
         print(response)
         # self.on_receive(response)
+
+        self.action_in_progress = False
 
         new_set_state = DeviceState.from_list(response.split(",")[1:], type)
         print(new_set_state.__dict__)
@@ -75,77 +80,17 @@ class HardwareConnector:
         # return ToggleState(False)
 
     
-    def get_sensor_data(self) -> Optional[Tuple[str, int]]:
+    def get_sensor_data(self, callback: Callable[[str, float], None]) -> None:
         command = "get_sensor_data"
         self.serial.write(command.encode())
-        
-        time.sleep(0.1)
-        response = self.serial.readline().decode().strip()
-        
-        if "," in response:
-            pin_num, value_str = response.split(",")
-            value = int(value_str)
-            return (pin_num, value)
-        else:
-            return None
 
-    # def get_sensor_data(self, sensor_id: str) -> Optional[Tuple[str, float]]:
-    #     command = f"get_sensor_data,{sensor_id}"
-    #     self.serial.write(command.encode())
-        
-    #     time.sleep(0.1)
-    #     response = self.serial.readline().decode().strip()
-        
-    #     if "," in response:
-    #         pin_num, value_str = response.split(",")
-    #         value = float(value_str)
-    #         return (pin_num, value)
-    #     else:
-    #         return None
-        
-    
-    # def get_sensor_data_cb(self, sensor_pin_number: int, callback: Callable[[str, float], None]) -> None:
-    
-    #  command = f"get_sensor_data,{sensor_pin_number}"
-    #  self.serial.write(command.encode())
-
-    #  time.sleep(0.1)
-    #  response = self.serial.readline().decode().strip()
-
-    #  pin_num, value_str = response.split(",")
-    #  value = float(value_str)
-    #  callback(str(pin_num), value)
-
-
-    
-    # def get_sensor_data(self, sensor_id: str) -> Optional[float]:
-    #     pin_num = None
-    #     if sensor_id == "photocell":
-    #         pin_num = "A1"
-    #     elif sensor_id == "motion":
-    #         pin_num = 2
-    #     elif sensor_id == "steam":
-    #         pin_num = "A3"
-    #     elif sensor_id == "soil":
-    #         pin_num = "A2"
-    #     elif sensor_id == "gas":
-    #         pin_num = "A0"
-    #     else:
-    #         return None  
-
-    
-    #     command = f"get_sensor_data,{pin_num}"
-    #     self.serial.write(command.encode())
-
-    
-    #     time.sleep(0.1)
-    #     response = self.serial.readline().decode().strip()
-
-    
-    #     try:
-    #         _, value_str = response.split(":")
-    #         value = float(value_str)
-    #         return value
-    #     except (ValueError, TypeError):
-    #         return None 
+        while True:
+            if not self.action_in_progress:
+                response = self.serial.readline().decode().strip()
+                if "," in response:
+                    pin_num, value_str = response.split(",")
+                    value = float(value_str)
+                    callback(pin_num, value)
+            else:
+                time.sleep(0.1)
 
