@@ -20,24 +20,21 @@ class DeviceState(JsonSerializable):
         state_dict = {}
 
         for i, val in enumerate(state_list):
-            print(val)
             if val != "-1":
                 attr_name = type.attribute_names[i]
-                print(attr_name)
                 state_dict[attr_name] = value_from_str(val, type.attribute_types[i])
-                print(value_from_str(val, type.attribute_types[i]))
 
         # Create a new instance of the DeviceState subclass using the dictionary
         if type == DeviceType.TOGGLE:
             return ToggleState(**state_dict)  # type: ignore
-        elif type == DeviceType.DOOR:
-            return DoorState(**state_dict)  # type: ignore
-        elif type == DeviceType.WINDOW:
-            return WindowState(**state_dict)  # type: ignore
+        elif type == DeviceType.OPENLOCK:
+            return OpenLockState(**state_dict)  # type: ignore
         elif type == DeviceType.DISPLAY:
             return DisplayState(**state_dict)  # type: ignore
         elif type == DeviceType.SPEAKER:
             return SpeakerState(**state_dict)  # type: ignore
+        elif type == DeviceType.FAN:
+            return FanState(**state_dict)  # type: ignore
         else:
             raise ValueError("Invalid device type")
 
@@ -47,7 +44,6 @@ class DeviceState(JsonSerializable):
     def to_list(self) -> list[str]:
         state_list = []
         for attr, value in self.__dict__.items():
-            print(attr, value)
             if value is None:
                 state_list.append("-1")
             else:
@@ -89,15 +85,10 @@ class ToggleState(DeviceState):
         self.on = on
 
 
-class DoorState(DeviceState):
+class OpenLockState(DeviceState):
     def __init__(self, open: bool | None = None, locked: bool | None = None):
         self.open = open
         self.locked = locked
-
-
-class WindowState(DeviceState):
-    def __init__(self, open: bool | None = None):
-        self.open = open
 
 
 class DisplayState(DeviceState):
@@ -113,4 +104,10 @@ class SpeakerState(DeviceState):
 
 class FanState(DeviceState):
     def __init__(self, on: bool | None = None, reverse: bool | None = None) -> None:
+        self.on = on
+        self.reverse = reverse
+
+
+class SensorState(DeviceState):
+    def __init__(self) -> None:
         super().__init__()

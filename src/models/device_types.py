@@ -6,11 +6,10 @@ from enum import Enum
 class DeviceType(Enum):
     TOGGLE = 0
     SPEAKER = 1
-    WINDOW = 2
-    DISPLAY = 3
-    DOOR = 4
-    BUZZER = 5
-    FAN = 6
+    DISPLAY = 2
+    OPENLOCK = 3
+    FAN = 4
+    SENSOR = 5
 
     @classmethod
     def from_str(cls, str_val: str) -> "DeviceType":
@@ -19,14 +18,14 @@ class DeviceType(Enum):
                 return cls.TOGGLE
             case "buzzer":
                 return cls.SPEAKER
-            case "window":
-                return cls.WINDOW
             case "screen":
                 return cls.DISPLAY
-            case "door":
-                return cls.DOOR
+            case "openLock":
+                return cls.OPENLOCK
             case "fan":
                 return cls.FAN
+            case "sensor":
+                return cls.SENSOR
             case _:
                 raise ValueError("Invalid device type")
 
@@ -48,14 +47,14 @@ class DeviceType(Enum):
     def attribute_names(self) -> list[str]:
         if self == DeviceType.TOGGLE:
             return ["on"]
-        elif self == DeviceType.DOOR:
+        elif self == DeviceType.OPENLOCK:
             return ["open", "locked"]
-        elif self == DeviceType.WINDOW:
-            return ["open"]
         elif self == DeviceType.DISPLAY:
             return ["on", "text"]
         elif self == DeviceType.SPEAKER:
-            return ["duration"]
+            return ["tune"]
+        elif self == DeviceType.FAN:
+            return ["on", "reverse"]
         else:
             raise ValueError("Invalid device type")
 
@@ -63,13 +62,13 @@ class DeviceType(Enum):
     def attribute_types(self) -> list[type]:
         if self == DeviceType.TOGGLE:
             return [bool]
-        elif self == DeviceType.DOOR:
+        elif self == DeviceType.OPENLOCK:
             return [bool, bool]
-        elif self == DeviceType.WINDOW:
-            return [bool]
         elif self == DeviceType.DISPLAY:
             return [bool, str]
         elif self == DeviceType.SPEAKER:
             return [str]
+        elif self == DeviceType.FAN:
+            return [bool, bool]
         else:
             raise ValueError("Invalid device type")

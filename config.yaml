@@ -8,6 +8,6 @@ RestAPI:
   Port: 3000
 
 Serial:
-  Port: "COM5"
+  Port: "COM3"
   baud_rate: 115200
   timeout: 0.5
