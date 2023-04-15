@@ -31,15 +31,16 @@ volatile int previousPhotocell;
 volatile int previousSteam;
 volatile int previousSoil;
 volatile int previousGas;
-volatile bool tunePlaying;
-void fanControl(int state, int rotation = 255);
+void fanControl(int state, int rotation = -1);
 void stateChange(int pin, String state, String state2 = "");
 void screenControl(int state, String text = "");
 void doorControl(int state, int lockedState = -1);
 void windowControl(int state, int lockedState= -1);
 String input;
 String currDisplayText = "";
-bool screenOff;
+bool screenOff = false;
+bool fanReverse = false;
+bool fanOn = false;
 
 ezBuzzer buzzer(3);
 String currSongID = "";
@@ -354,7 +355,11 @@ void stateChange(int pin, String state, String state2)
     lightControl(pin, state.toInt());
     break;
   case 99:
-    screenControl(state.toInt(), state2);
+    if (state2.toInt() == -1) {
+      screenControl(state.toInt());
+    } else {
+      screenControl(state.toInt(), state2);
+    }
     break;
   }
 }
@@ -365,45 +370,44 @@ void buzzerControl(int duration, int frequency){
   noTone(3);
 }
 
+void writeScreen(String text) {
+  mylcd.setCursor(0, 1);
+  mylcd.print(text);
+}
+
 void screenControl(int state, String text){
   String returnMessage;
-  if (state == 255)
+  if (state != -1) {
+    if (state == 255) {
+      screenOff = false;
+    } else {
+      screenOff = true;
+    }
+  }  
+
+  if (text != "") {
+    currDisplayText = text;
+  }
+  
+  if (screenOff)
+  {
+    mylcd.noBacklight();
+  }
+  else
   {
     mylcd.backlight();
-    screenOff = false;
-    returnMessage = "99";
-    returnMessage += ",";
-    returnMessage += "255";
-    returnMessage += ",";
-    returnMessage += currDisplayText;
-    Serial.println(returnMessage);
   }
-  else if (state == 0)
-  {
-        
-    mylcd.noBacklight();
-    screenOff = true;
-    returnMessage = "99";
-    returnMessage += ",";
-    returnMessage += "0";
-    returnMessage += ",";
-    returnMessage += currDisplayText;
-    Serial.println(returnMessage);
-  }
+  
+  mylcd.clear();
+  mylcd.setCursor(1 - 1, 1 - 1);
+  mylcd.print(currDisplayText);
 
-  if (text != "")
-  {
-    currDisplayText = text;
-    mylcd.clear();
-    mylcd.setCursor(1 - 1, 1 - 1);
-    mylcd.print(text);
-    returnMessage = "99";
-    returnMessage += ",";
-    returnMessage += screenOff;
-    returnMessage += ",";
-    returnMessage += currDisplayText;
-    Serial.println(returnMessage);
-  }
+  returnMessage = "99";
+  returnMessage += ",";
+  returnMessage += screenOff ? "0" : "255";
+  returnMessage += ",";
+  returnMessage += currDisplayText;
+  Serial.println(returnMessage);
 }
 
 void lightControl(int pin, int state)
@@ -445,9 +449,9 @@ void windowControl(int state, int lockedState)
   }
   if (windowLock == 1)
   {
-    screenControl(255, "Error. Locked!");
+    writeScreen("Error. Locked!");
     delay(1000);
-    screenControl(255, "Welcome home!");
+    writeScreen("Welcome home!");
     returnMessage = "10";
     returnMessage += ",";
     returnMessage += state;
@@ -487,9 +491,9 @@ void doorControl(int state, int lockedState)
   }
   if (doorLock == 1)
   {
-    screenControl(255, "Error. Locked!");
+    writeScreen("Error. Locked!");
     delay(1000);
-    screenControl(255, "Welcome home!");
+    writeScreen("Welcome home!");
     returnMessage = "9";
     returnMessage += ",";
     returnMessage += state;
@@ -514,37 +518,63 @@ void doorControl(int state, int lockedState)
 void fanControl(int state, int rotation)
 {
   String returnMessage;
-  if ((state == 255) && (rotation == 255))
-  {
-    digitalWrite(7, HIGH);
+  if(rotation != -1) {
+    if (rotation == 255) {
+      fanReverse = true;
+    } else if (rotation == 0) {
+      fanReverse = false;
+    }
+  }
+
+  if (state != -1) {
+    if (state == 255) {
+      fanOn = true;
+    } else {
+      fanOn = false;
+    }
+  }
+  
+  if (fanOn) {
+    if (fanReverse) {
+      digitalWrite(7, HIGH);
+      digitalWrite(6, LOW);
+      returnMessage = "7";
+      returnMessage += ",";
+      returnMessage += "255";
+      returnMessage += ",";
+      returnMessage += "255";
+      Serial.println(returnMessage);      
+    } else {
+      digitalWrite(7, LOW);
+      digitalWrite(6, HIGH);
+      returnMessage = "7";
+      returnMessage += ",";
+      returnMessage += "255";
+      returnMessage += ",";
+      returnMessage += "0";
+      Serial.println(returnMessage);
+    }
+  } else {
+    digitalWrite(7, LOW);
     digitalWrite(6, LOW);
     returnMessage = "7";
     returnMessage += ",";
-    returnMessage += "255";
+    returnMessage += "0";
     returnMessage += ",";
-    returnMessage += "255";
+    returnMessage += fanReverse ? "255": "0";
     Serial.println(returnMessage);
+  }
+
+  if ((state == 255) && (rotation == 255))
+  {
+
   }
   else if ((state == 255) && (rotation == 0))
   {
-    digitalWrite(7, LOW);
-    digitalWrite(6, HIGH);
-    returnMessage = "7";
-    returnMessage += ",";
-    returnMessage += "255";
-    returnMessage += ",";
-    returnMessage += "0";
-    Serial.println(returnMessage);
+
   }
   else if (((state == 0) && (rotation == 0)) || (state == 0) && (rotation == 255))
   {
-    digitalWrite(7, LOW);
-    digitalWrite(6, LOW);
-    returnMessage = "7";
-    returnMessage += ",";
-    returnMessage += "0";
-    returnMessage += ",";
-    returnMessage += rotation;
-    Serial.println(returnMessage);
+
   }  
 }

@@ -33,6 +33,7 @@ class HardwareConnector:
         state_list = state.to_list()
         # Compile into "pin, attr1, attr2, attr3 ..." str with attr being -1 if not present
         state_str = ",".join([str(pin)] + state_list)
+        print(state_str)
 
         # Send comma string to serial
         self.serial.write(state_str.encode())
@@ -44,6 +45,7 @@ class HardwareConnector:
         response = self.serial.readline().decode().strip()
         while pin != response[:2] and pin != response[:1]:
             time.sleep(0.5)
+            print(response)
             response = self.serial.readline().decode().strip()
 
         self.action_in_progress = False
@@ -82,8 +84,8 @@ class HardwareConnector:
                 continue
 
             response = self.serial.readline().decode().strip()
-            print(response)
             if "," in response:
+                print(response)
                 pin_num, value = response.split(",")
                 loop.add_callback(self.on_send, int(pin_num), value)
                 # self.on_send(int(pin_num), value)
