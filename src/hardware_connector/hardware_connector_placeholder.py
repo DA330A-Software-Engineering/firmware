@@ -39,9 +39,6 @@ class HardwareConnector:
         self.serial.write(state_str.encode())
         # self.on_send(state_str)
 
-        if deviceType == DeviceType.SPEAKER:
-            return False
-
         self.action_in_progress = True
 
         # Receive or get state to check it has updated correctly

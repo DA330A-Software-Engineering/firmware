@@ -237,6 +237,10 @@ void musicPlayer(String songID){
         String returnMessage;
         returnMessage = 3;
         returnMessage += ",";
+        returnMessage += "none";
+        Serial.println(returnMessage);
+        returnMessage = 3;
+        returnMessage += ",";
         returnMessage += "pirate";
         Serial.println(returnMessage);
         return;
@@ -245,7 +249,7 @@ void musicPlayer(String songID){
   String returnMessage;
   returnMessage = 3;
   returnMessage += ",";
-  returnMessage += "";
+  returnMessage += "none";
   Serial.println(returnMessage);
 }
 
