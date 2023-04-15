@@ -39,13 +39,15 @@ class HardwareConnector:
         self.serial.write(state_str.encode())
         # self.on_send(state_str)
 
+        if deviceType == DeviceType.SPEAKER:
+            return False
+
         self.action_in_progress = True
 
         # Receive or get state to check it has updated correctly
         response = self.serial.readline().decode().strip()
         while pin != response[:2] and pin != response[:1]:
             time.sleep(0.5)
-            print(response)
             response = self.serial.readline().decode().strip()
 
         self.action_in_progress = False
@@ -85,7 +87,6 @@ class HardwareConnector:
 
             response = self.serial.readline().decode().strip()
             if "," in response:
-                print(response)
                 pin_num, value = response.split(",")
                 loop.add_callback(self.on_send, int(pin_num), value)
                 # self.on_send(int(pin_num), value)
