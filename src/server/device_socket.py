@@ -11,7 +11,6 @@ class DeviceSocket(object):
         self.timeout = timeout
         self.ioloop = IOLoop.current()
         self.ws: WebSocketClientConnection | None = None
-        self.connect()
 
     @gen.coroutine
     def connect(self):

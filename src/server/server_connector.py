@@ -30,7 +30,7 @@ class ServerConnector:
 
     def add_action_listener(self, action_socket_listener: Callable[[Action], HardwareReply]):
         def wrapper(action_json: str):
-            print(action_json)
+            print(f"[ACTION LISTENER] action: {action_json}")
             action = Action.from_json(action_json)
             response = action_socket_listener(action)
             self.send_response(response)

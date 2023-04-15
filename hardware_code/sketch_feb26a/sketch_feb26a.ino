@@ -1,26 +1,163 @@
 #include <Servo.h>
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
+#include <NonBlockingRtttl.h>
+#include <ezBuzzer.h>
 // Set the communication address of I2C to 0x27, display 16 characters every line, two lines in total
 LiquidCrystal_I2C mylcd(0x27, 16, 2);
+#define NOTE_C4 262
+#define NOTE_D4 294
+#define NOTE_E4 330
+#define NOTE_F4 349
+#define NOTE_G4 392
+#define NOTE_A4 440
+#define NOTE_B4 494
+#define NOTE_C5 523
+#define NOTE_D5 587
+#define NOTE_E5 659
+#define NOTE_F5 698
+#define NOTE_G5 784
+#define NOTE_A5 880
+#define NOTE_B5 988
 
 // set ports of two servos to digital 9 and 10
 Servo servo_10;
 Servo servo_9;
 volatile bool windowLock;
 volatile bool doorLock;
+volatile bool playingMusic = false;
 volatile int previousMotion;
 volatile int previousPhotocell;
 volatile int previousSteam;
 volatile int previousSoil;
 volatile int previousGas;
-void fanControl(int state, int rotation = 255);
-void stateChange(int pin, int state, String state2 = "");
+void fanControl(int state, int rotation = -1);
+void stateChange(int pin, String state, String state2 = "");
 void screenControl(int state, String text = "");
 void doorControl(int state, int lockedState = -1);
 void windowControl(int state, int lockedState= -1);
 String input;
-bool screenOff;
+String currDisplayText = "";
+bool screenOff = false;
+bool fanReverse = false;
+bool fanOn = false;
+
+ezBuzzer buzzer(3);
+String currSongID = "";
+
+
+/*Music list*/
+const char * pirate = "pirate:d=4,o=6,b=200:8d,8e,2f,8g,8a,g,f,e,f,g,a,g,p,8f,8g,a,p,8g,8f,e,f,e,d,p,8e,8c,d,8p,p,8d,8e,f,p,8e,8f,g,f,g,a,g,f,d";
+
+
+// Music notes of the song, 0 is a rest/pulse
+int pirateNotes[] = {
+    NOTE_E4, NOTE_G4, NOTE_A4, NOTE_A4, 0,
+    NOTE_A4, NOTE_B4, NOTE_C5, NOTE_C5, 0,
+    NOTE_C5, NOTE_D5, NOTE_B4, NOTE_B4, 0,
+    NOTE_A4, NOTE_G4, NOTE_A4, 0,
+
+    NOTE_E4, NOTE_G4, NOTE_A4, NOTE_A4, 0,
+    NOTE_A4, NOTE_B4, NOTE_C5, NOTE_C5, 0,
+    NOTE_C5, NOTE_D5, NOTE_B4, NOTE_B4, 0,
+    NOTE_A4, NOTE_G4, NOTE_A4, 0,
+
+    NOTE_E4, NOTE_G4, NOTE_A4, NOTE_A4, 0,
+    NOTE_A4, NOTE_C5, NOTE_D5, NOTE_D5, 0,
+    NOTE_D5, NOTE_E5, NOTE_F5, NOTE_F5, 0,
+    NOTE_E5, NOTE_D5, NOTE_E5, NOTE_A4, 0,
+
+    NOTE_A4, NOTE_B4, NOTE_C5, NOTE_C5, 0,
+    NOTE_D5, NOTE_E5, NOTE_A4, 0,
+    NOTE_A4, NOTE_C5, NOTE_B4, NOTE_B4, 0,
+    NOTE_C5, NOTE_A4, NOTE_B4, 0,
+
+    NOTE_A4, NOTE_A4,
+    //Repeat of first part
+    NOTE_A4, NOTE_B4, NOTE_C5, NOTE_C5, 0,
+    NOTE_C5, NOTE_D5, NOTE_B4, NOTE_B4, 0,
+    NOTE_A4, NOTE_G4, NOTE_A4, 0,
+
+    NOTE_E4, NOTE_G4, NOTE_A4, NOTE_A4, 0,
+    NOTE_A4, NOTE_B4, NOTE_C5, NOTE_C5, 0,
+    NOTE_C5, NOTE_D5, NOTE_B4, NOTE_B4, 0,
+    NOTE_A4, NOTE_G4, NOTE_A4, 0,
+
+    NOTE_E4, NOTE_G4, NOTE_A4, NOTE_A4, 0,
+    NOTE_A4, NOTE_C5, NOTE_D5, NOTE_D5, 0,
+    NOTE_D5, NOTE_E5, NOTE_F5, NOTE_F5, 0,
+    NOTE_E5, NOTE_D5, NOTE_E5, NOTE_A4, 0,
+
+    NOTE_A4, NOTE_B4, NOTE_C5, NOTE_C5, 0,
+    NOTE_D5, NOTE_E5, NOTE_A4, 0,
+    NOTE_A4, NOTE_C5, NOTE_B4, NOTE_B4, 0,
+    NOTE_C5, NOTE_A4, NOTE_B4, 0,
+    //End of Repeat
+
+    NOTE_E5, 0, 0, NOTE_F5, 0, 0,
+    NOTE_E5, NOTE_E5, 0, NOTE_G5, 0, NOTE_E5, NOTE_D5, 0, 0,
+    NOTE_D5, 0, 0, NOTE_C5, 0, 0,
+    NOTE_B4, NOTE_C5, 0, NOTE_B4, 0, NOTE_A4,
+
+    NOTE_E5, 0, 0, NOTE_F5, 0, 0,
+    NOTE_E5, NOTE_E5, 0, NOTE_G5, 0, NOTE_E5, NOTE_D5, 0, 0,
+    NOTE_D5, 0, 0, NOTE_C5, 0, 0,
+    NOTE_B4, NOTE_C5, 0, NOTE_B4, 0, NOTE_A4};
+
+// Durations (in ms) of each music note of the song
+// Quarter Note is 4 ms when songSpeed = 1.0
+int pirateDurations[] = {
+    8, 8, 4, 8, 8,
+    8, 8, 4, 8, 8,
+    8, 8, 4, 8, 8,
+    8, 8, 2, 8,
+    
+    8, 8, 4, 8, 8,
+    8, 8, 4, 8, 8,
+    8, 8, 4, 8, 8,
+    8, 8, 2, 8,
+
+    8, 8, 4, 8, 8,
+    8, 8, 4, 8, 8,
+    8, 8, 4, 8, 8,
+    8, 8, 8, 4, 8,
+
+    8, 8, 4, 8, 8,
+    4, 8, 4, 8,
+    8, 8, 4, 8, 8,
+    8, 8, 2, 2,
+
+    4, 8,
+    //Rpeat of First Part
+    8, 8, 4, 8, 8,
+    8, 8, 4, 8, 8,
+    8, 8, 2, 8,
+
+    8, 8, 4, 8, 8,
+    8, 8, 4, 8, 8,
+    8, 8, 4, 8, 8,
+    8, 8, 2, 8,
+
+    8, 8, 4, 8, 8,
+    8, 8, 4, 8, 8,
+    8, 8, 4, 8, 8,
+    8, 8, 8, 4, 8,
+
+    8, 8, 4, 8, 8,
+    4, 8, 4, 8,
+    8, 8, 4, 8, 8,
+    8, 8, 2, 2,
+    //End of Repeat
+
+    4, 8, 2, 4, 8, 2,
+    8, 8, 8, 8, 8, 8, 8, 8, 2,
+    4, 8, 2, 4, 8, 2,
+    8, 8, 8, 8, 8, 1,
+
+    4, 8, 2, 4, 8, 2,
+    8, 8, 8, 8, 8, 8, 8, 8, 2,
+    4, 8, 2, 4, 8, 2,
+    8, 8, 8, 8, 8, 1};
 
 void setup()
 {
@@ -58,6 +195,7 @@ void setup()
 }
 
 void loop(){
+    buzzer.loop();
 
     while (Serial.available())
     {
@@ -67,19 +205,52 @@ void loop(){
     {
       if (getValue(input, ',', 2) == "")
       {
-        stateChange(getValue(input, ',', 0).toInt(), getValue(input, ',', 1).toInt());
+        stateChange(getValue(input, ',', 0).toInt(), getValue(input, ',', 1));
       }
       else
       {
-        stateChange(getValue(input, ',', 0).toInt(), getValue(input, ',', 1).toInt(), getValue(input, ',', 2));
+        stateChange(getValue(input, ',', 0).toInt(), getValue(input, ',', 1), getValue(input, ',', 2));
       }
       input = "";
     }
     
-    while(Serial.available() == false){
+    if(buzzer.getState() == BUZZER_IDLE && playingMusic) {
+      playingMusic = false;      
+      String returnMessage;
+      returnMessage = 3;
+      returnMessage += ",";
+      returnMessage += "FIN";
+      Serial.println(returnMessage);      
+    }
+    
+    while(!Serial.available() && buzzer.getState() == BUZZER_IDLE){
       sensorChecker();
     }
 
+}
+
+void musicPlayer(String songID){
+  if (songID == "pirate") {
+    if (buzzer.getState() == BUZZER_IDLE) {
+        buzzer.playMelody(pirateNotes, pirateDurations, sizeof(pirateNotes) / 2);
+        playingMusic = true;
+        String returnMessage;
+        returnMessage = 3;
+        returnMessage += ",";
+        returnMessage += "none";
+        Serial.println(returnMessage);
+        returnMessage = 3;
+        returnMessage += ",";
+        returnMessage += "pirate";
+        Serial.println(returnMessage);
+        return;
+    }
+  }  
+  String returnMessage;
+  returnMessage = 3;
+  returnMessage += ",";
+  returnMessage += "none";
+  Serial.println(returnMessage);
 }
 
 void sensorChecker(){
@@ -91,7 +262,7 @@ void sensorChecker(){
   delay(500);
   if (abs(previousPhotocell-analogRead(A1)) > 200){
   String returnMessage;
-    returnMessage = "A1";
+    returnMessage = "8";
     returnMessage += ",";
     returnMessage += analogRead(A1);
     Serial.println(returnMessage);
@@ -108,7 +279,7 @@ void sensorChecker(){
 
   if (abs(previousSteam-analogRead(A3)) > 200){
   String returnMessage;
-    returnMessage = "A3";
+    returnMessage = "6";
     returnMessage += ",";
     returnMessage += analogRead(A3);
     Serial.println(returnMessage);
@@ -118,7 +289,7 @@ void sensorChecker(){
 
   if (abs(previousSoil-analogRead(A2)) > 100){
   String returnMessage;
-    returnMessage = "A2";
+    returnMessage = "4";
     returnMessage += ",";
     returnMessage += analogRead(A2);
     Serial.println(returnMessage);
@@ -127,81 +298,13 @@ void sensorChecker(){
 
   if (abs(previousGas-analogRead(A0)) > 100){
     String returnMessage;
-    returnMessage = "A0";
+    returnMessage = "1";
     returnMessage += ",";
     returnMessage += analogRead(A0);
     Serial.println(returnMessage);
   }
 
 }
-
-
-/*
-void photocellSensor(){
-  
-  previousPhotocell = analogRead(A1);
-  delay(250);
-  if (abs(previousPhotocell-analogRead(A1)) > 200){
-    String returnMessage;
-    returnMessage = "A1";
-    returnMessage += ",";
-    returnMessage += analogRead(A1);
-    Serial.println(returnMessage);
-  }
-}
-
-void motionSensor(){
-  String returnMessage;
-  previousMotion = digitalRead(2);
-  delay(100);
-  if (digitalRead(2) != previousMotion){
-      returnMessage = 2;
-      returnMessage += ",";
-      returnMessage += digitalRead(2);
-      Serial.println(returnMessage);
-  }
-}
-
-void steamSensor(){
-  String returnMessage;
-
-  previousSteam = analogRead(A3);
-  delay(250);
-  if (abs(previousSteam-analogRead(A3)) > 200){
-    returnMessage = "A3";
-    returnMessage += ",";
-    returnMessage += analogRead(A3);
-    Serial.println(returnMessage);
-  }
-}
-
-void soilSensor(){
-  String returnMessage;
-
-  previousSoil = analogRead(A2);
-  delay(250);
-  if (abs(previousSoil-analogRead(A2)) > 100){
-    returnMessage = "A2";
-    returnMessage += ",";
-    returnMessage += analogRead(A2);
-    Serial.println(returnMessage);
-  }
-}
-
-void gasSensor(){
-  String returnMessage;
-
-  previousGas = analogRead(A0);
-  delay(500);
-  if (abs(previousGas-analogRead(A0)) > 100){
-    returnMessage = "A0";
-    returnMessage += ",";
-    returnMessage += analogRead(A0);
-    Serial.println(returnMessage);
-  }
-}
-
-*/
 
 String getValue(String data, char separator, int index){
   int found = 0;
@@ -221,43 +324,46 @@ String getValue(String data, char separator, int index){
   return found > index ? data.substring(strIndex[0], strIndex[1]) : "";
 }
 
-void stateChange(int pin, int state, String state2)
+void stateChange(int pin, String state, String state2)
 {
   switch (pin)
   {
   case 3:
-    buzzerControl(state, state2.toInt());
+    musicPlayer(state);
     break;
   case 5:
-    lightControl(pin, state);
+    lightControl(pin, state.toInt());
     break;
   case 7:
     if (state2 != "")
     {
-      fanControl(state, state2.toInt());
-      break;
+      fanControl(state.toInt(), state2.toInt());
     }
     else
     {
-      fanControl(state);
-      break;
+      fanControl(state.toInt());
     }
+    break;
   case 9:
     if(state2 != ""){
-      doorControl(state, state2.toInt());
+      doorControl(state.toInt(), state2.toInt());
     }
     else{
-      doorControl(state);
+      doorControl(state.toInt());
     }
     break;
   case 10:
-    windowControl(state, state2.toInt());
+    windowControl(state.toInt(), state2.toInt());
     break;
   case 13:
-    lightControl(pin, state);
+    lightControl(pin, state.toInt());
     break;
   case 99:
-    screenControl(state, state2);
+    if (state2.toInt() == -1) {
+      screenControl(state.toInt());
+    } else {
+      screenControl(state.toInt(), state2);
+    }
     break;
   }
 }
@@ -268,22 +374,44 @@ void buzzerControl(int duration, int frequency){
   noTone(3);
 }
 
+void writeScreen(String text) {
+  mylcd.setCursor(0, 1);
+  mylcd.print(text);
+}
+
 void screenControl(int state, String text){
-  if (state == 255)
-  {
-    mylcd.backlight();
+  String returnMessage;
+  if (state != -1) {
+    if (state == 255) {
+      screenOff = false;
+    } else {
+      screenOff = true;
+    }
+  }  
+
+  if (text != "") {
+    currDisplayText = text;
   }
-  else if (state == 0)
+  
+  if (screenOff)
   {
     mylcd.noBacklight();
   }
-
-  if (text != "")
+  else
   {
-    mylcd.clear();
-    mylcd.setCursor(1 - 1, 1 - 1);
-    mylcd.print(text);
+    mylcd.backlight();
   }
+  
+  mylcd.clear();
+  mylcd.setCursor(1 - 1, 1 - 1);
+  mylcd.print(currDisplayText);
+
+  returnMessage = "99";
+  returnMessage += ",";
+  returnMessage += screenOff ? "0" : "255";
+  returnMessage += ",";
+  returnMessage += currDisplayText;
+  Serial.println(returnMessage);
 }
 
 void lightControl(int pin, int state)
@@ -314,6 +442,7 @@ void lightControl(int pin, int state)
 
 void windowControl(int state, int lockedState)
 {
+  String returnMessage;
   if(lockedState != -1){
     windowLock = lockedState;
     Serial.print("lockedState = ");
@@ -324,13 +453,19 @@ void windowControl(int state, int lockedState)
   }
   if (windowLock == 1)
   {
-    screenControl(255, "Error. Locked!");
+    writeScreen("Error. Locked!");
     delay(1000);
-    screenControl(255, "Welcome home!");
+    writeScreen("Welcome home!");
+    returnMessage = "10";
+    returnMessage += ",";
+    returnMessage += state;
+    returnMessage += ",";
+    returnMessage += "255";
+    Serial.println(returnMessage);
   }
   else if (windowLock == 0)
   {
-    if(state != -1 && state != -1){
+    if(state != -1){
       if(state == 255){
         servo_10.write(120);
       }
@@ -338,13 +473,13 @@ void windowControl(int state, int lockedState)
         servo_10.write(0);
       }
     }
+    returnMessage = "10";
+    returnMessage += ",";
+    returnMessage += state;
+    returnMessage += ",";
+    returnMessage += "0";
+    Serial.println(returnMessage);
   }
-    Serial.print("State = ");
-    Serial.println(state);
-    Serial.print("lockedState = ");
-    Serial.println(lockedState);
-    Serial.print("windowLock = ");
-    Serial.println(windowLock);
 }
 
 void doorControl(int state, int lockedState)
@@ -360,9 +495,9 @@ void doorControl(int state, int lockedState)
   }
   if (doorLock == 1)
   {
-    screenControl(255, "Error. Locked!");
+    writeScreen("Error. Locked!");
     delay(1000);
-    screenControl(255, "Welcome home!");
+    writeScreen("Welcome home!");
     returnMessage = "9";
     returnMessage += ",";
     returnMessage += state;
@@ -386,19 +521,64 @@ void doorControl(int state, int lockedState)
 
 void fanControl(int state, int rotation)
 {
+  String returnMessage;
+  if(rotation != -1) {
+    if (rotation == 255) {
+      fanReverse = true;
+    } else if (rotation == 0) {
+      fanReverse = false;
+    }
+  }
+
+  if (state != -1) {
+    if (state == 255) {
+      fanOn = true;
+    } else {
+      fanOn = false;
+    }
+  }
+  
+  if (fanOn) {
+    if (fanReverse) {
+      digitalWrite(7, HIGH);
+      digitalWrite(6, LOW);
+      returnMessage = "7";
+      returnMessage += ",";
+      returnMessage += "255";
+      returnMessage += ",";
+      returnMessage += "255";
+      Serial.println(returnMessage);      
+    } else {
+      digitalWrite(7, LOW);
+      digitalWrite(6, HIGH);
+      returnMessage = "7";
+      returnMessage += ",";
+      returnMessage += "255";
+      returnMessage += ",";
+      returnMessage += "0";
+      Serial.println(returnMessage);
+    }
+  } else {
+    digitalWrite(7, LOW);
+    digitalWrite(6, LOW);
+    returnMessage = "7";
+    returnMessage += ",";
+    returnMessage += "0";
+    returnMessage += ",";
+    returnMessage += fanReverse ? "255": "0";
+    Serial.println(returnMessage);
+  }
+
   if ((state == 255) && (rotation == 255))
   {
-    digitalWrite(7, HIGH);
-    digitalWrite(6, LOW);
+
   }
   else if ((state == 255) && (rotation == 0))
   {
-    digitalWrite(7, LOW);
-    digitalWrite(6, HIGH);
+
   }
   else if (((state == 0) && (rotation == 0)) || (state == 0) && (rotation == 255))
   {
-    digitalWrite(7, LOW);
-    digitalWrite(6, LOW);
-  }
+
+  }  
 }

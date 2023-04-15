@@ -1,21 +1,14 @@
-from ast import Tuple
 from src.models.device_types import DeviceType
 from src.models.device_state import DeviceState
-from typing import Callable, Optional
+from typing import Callable
 import serial  # type: ignore
 import time
-import threading
+from tornado.ioloop import IOLoop
 
 
 class HardwareConnector:
-    def __init__(
-        self,
-        config: dict,
-        on_receive: Callable[[str], None] | None = None,
-        on_send: Callable[[int, int], None] | None = None,
-    ) -> None:
+    def __init__(self, config: dict, on_send: Callable[[int, str], None]) -> None:
         self.config = config
-        self.on_receive = on_receive
         self.on_send = on_send
         self.serial = serial.Serial(
             port=self.config["Port"],
@@ -23,20 +16,24 @@ class HardwareConnector:
             timeout=float(self.config["timeout"]),
         )
         self.action_in_progress = False
-        self.sensor_thread = threading.Thread(target=self.listen_for_sensor_updates)
-        self.sensor_thread.daemon = True
-        self.is_sensor_thread_running = False
+        # self.sensor_thread = threading.Thread(target=self.listen_for_sensor_updates)
+        # self.sensor_thread.daemon = True
+        # self.is_sensor_thread_running = False
 
-    def submit_state(self, pin: str, type: DeviceType, state: DeviceState) -> bool:
+    def submit_state(self, pin: str, deviceType: DeviceType, state: DeviceState) -> bool:
         # ! turn state into list of str (0-255 if bool or number)
         # ! Compile into "pin, attr1, attr2, attr3 ..." str with attr being -1 if not present
         # ! Send comma string to serial
         # ! Receive or get state to check it has updated correctly
+
+        if deviceType == DeviceType.SENSOR:
+            return True
+
         # Convert state to a list of strings (0-255 if bool or number)
         state_list = state.to_list()
-
         # Compile into "pin, attr1, attr2, attr3 ..." str with attr being -1 if not present
         state_str = ",".join([str(pin)] + state_list)
+        print(state_str)
 
         # Send comma string to serial
         self.serial.write(state_str.encode())
@@ -46,16 +43,13 @@ class HardwareConnector:
 
         # Receive or get state to check it has updated correctly
         response = self.serial.readline().decode().strip()
-        while pin not in response:
+        while pin != response[:2] and pin != response[:1]:
+            time.sleep(0.5)
             response = self.serial.readline().decode().strip()
-        print(response)
-        # self.on_receive(response)
 
         self.action_in_progress = False
 
-        new_set_state = DeviceState.from_list(response.split(",")[1:], type)
-        print(new_set_state.__dict__)
-        print(state.__dict__)
+        new_set_state = DeviceState.from_list(response.split(",")[1:], deviceType)
 
         return new_set_state == state
 
@@ -83,21 +77,20 @@ class HardwareConnector:
 
         # return ToggleState(False)
 
-    
-    def listen_for_sensor_updates(self):
+    def listen_for_sensor_updates(self, loop: IOLoop):
         while True:
-            if self.is_sensor_thread_running and not self.action_in_progress:
-                response = self.serial.readline().decode().strip()
-                if "," in response:
-                    pin_num, value = response.split(",")
-                    if self.on_send:  # on_send callback with the pin_num and value
-                        self.on_send(pin_num, value)
+            if self.action_in_progress:
+                continue
 
-    
-    def start_sensor_thread(self):
-        self.is_sensor_thread_running = True
-        self.sensor_thread.start()
+            response = self.serial.readline().decode().strip()
+            if "," in response:
+                pin_num, value = response.split(",")
+                loop.add_callback(self.on_send, int(pin_num), value)
+                # self.on_send(int(pin_num), value)
 
-    
-    def stop_sensor_thread(self):
-        self.is_sensor_thread_running = False
+    # def start_sensor_thread(self):
+    #     self.is_sensor_thread_running = True
+    #     self.sensor_thread.start()
+
+    # def stop_sensor_thread(self):
+    #     self.is_sensor_thread_running = False
