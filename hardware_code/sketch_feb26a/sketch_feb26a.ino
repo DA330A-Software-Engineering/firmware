@@ -5,13 +5,55 @@
 #include <ezBuzzer.h>
 // Set the communication address of I2C to 0x27, display 16 characters every line, two lines in total
 LiquidCrystal_I2C mylcd(0x27, 16, 2);
+#define NOTE_B0 31
+#define NOTE_C1 33
+#define NOTE_CS1 35
+#define NOTE_D1 37
+#define NOTE_DS1 39
+#define NOTE_E1 41
+#define NOTE_F1 44
+#define NOTE_FS1 46
+#define NOTE_G1 49
+#define NOTE_GS1 52
+#define NOTE_A1 55
+#define NOTE_AS1 58
+#define NOTE_B1 62
+#define NOTE_C2 65
+#define NOTE_CS2 69
+#define NOTE_D2 73
+#define NOTE_DS2 78
+#define NOTE_E2 82
+#define NOTE_F2 87
+#define NOTE_FS2 93
+#define NOTE_G2 98
+#define NOTE_GS2 104
+#define NOTE_A2 110
+#define NOTE_AS2 117
+#define NOTE_B2 123
+#define NOTE_C3 131
+#define NOTE_CS3 139
+#define NOTE_D3 147
+#define NOTE_DS3 156
+#define NOTE_E3 165
+#define NOTE_F3 175
+#define NOTE_FS3 185
+#define NOTE_G3 196
+#define NOTE_GS3 208
+#define NOTE_A3 220
+#define NOTE_AS3 233
+#define NOTE_B3 247
 #define NOTE_C4 262
-#define NOTE_D4 294
-#define NOTE_E4 330
+#define NOTE_CS4 277
+#define NOTE_DS4 311
 #define NOTE_F4 349
-#define NOTE_G4 392
-#define NOTE_A4 440
-#define NOTE_B4 494
+#define NOTE_FS4 370
+#define NOTE_GS4 415
+#define NOTE_AS4 466
+#define NOTE_CS5 554
+#define NOTE_DS5 622
+#define NOTE_FS5 740
+#define NOTE_GS5 831
+#define NOTE_AS5 932
 #define NOTE_C5 523
 #define NOTE_D5 587
 #define NOTE_E5 659
@@ -19,36 +61,67 @@ LiquidCrystal_I2C mylcd(0x27, 16, 2);
 #define NOTE_G5 784
 #define NOTE_A5 880
 #define NOTE_B5 988
+#define NOTE_C6 1047
+#define NOTE_CS6 1109
+#define NOTE_DS6 1245
+#define NOTE_E6 1319
+#define NOTE_F6 1397
+#define NOTE_FS6 1480
+#define NOTE_G6 1568
+#define NOTE_GS6 1661
+#define NOTE_A6 1760
+#define NOTE_AS6 1865
+#define NOTE_B6 1976
+#define NOTE_C7 2093
+#define NOTE_CS7 2217
+#define NOTE_D7 2349
+#define NOTE_DS7 2489
+#define NOTE_E7 2637
+#define NOTE_F7 2794
+#define NOTE_FS7 2960
+#define NOTE_G7 3136
+#define NOTE_GS7 3322
+#define NOTE_A7 3520
+#define NOTE_AS7 3729
+#define NOTE_B7 3951
+#define NOTE_C8 4186
+#define NOTE_CS8 4435
+#define NOTE_D8 4699
+#define NOTE_DS8 4978
+#define REST 0
 
 // set ports of two servos to digital 9 and 10
 Servo servo_10;
 Servo servo_9;
 volatile bool windowLock;
+volatile bool windowOpen;
 volatile bool doorLock;
+volatile bool doorOpen;
 volatile bool playingMusic = false;
 volatile int previousMotion;
 volatile int previousPhotocell;
 volatile int previousSteam;
 volatile int previousSoil;
 volatile int previousGas;
+volatile int currMotion;
+volatile int currPhotocell;
+volatile int currSteam;
+volatile int currSoil;
+volatile int currGas;
+
 void fanControl(int state, int rotation = -1);
 void stateChange(int pin, String state, String state2 = "");
-void screenControl(int state, String text = "");
+void screenControl(int state, char* text = "");
 void doorControl(int state, int lockedState = -1);
 void windowControl(int state, int lockedState= -1);
 String input;
-String currDisplayText = "";
+char* currDisplayText = "";
 bool screenOff = false;
 bool fanReverse = false;
 bool fanOn = false;
 
 ezBuzzer buzzer(3);
 String currSongID = "";
-
-
-/*Music list*/
-const char * pirate = "pirate:d=4,o=6,b=200:8d,8e,2f,8g,8a,g,f,e,f,g,a,g,p,8f,8g,a,p,8g,8f,e,f,e,d,p,8e,8c,d,8p,p,8d,8e,f,p,8e,8f,g,f,g,a,g,f,d";
-
 
 // Music notes of the song, 0 is a rest/pulse
 int pirateNotes[] = {
@@ -107,67 +180,76 @@ int pirateNotes[] = {
 // Durations (in ms) of each music note of the song
 // Quarter Note is 4 ms when songSpeed = 1.0
 int pirateDurations[] = {
-    8, 8, 4, 8, 8,
-    8, 8, 4, 8, 8,
-    8, 8, 4, 8, 8,
-    8, 8, 2, 8,
-    
-    8, 8, 4, 8, 8,
-    8, 8, 4, 8, 8,
-    8, 8, 4, 8, 8,
-    8, 8, 2, 8,
+  8, 8, 4, 8, 8,
+  8, 8, 4, 8, 8,
+  8, 8, 4, 8, 8,
+  8, 8, 2, 8,
+  
+  8, 8, 4, 8, 8,
+  8, 8, 4, 8, 8,
+  8, 8, 4, 8, 8,
+  8, 8, 2, 8,
 
-    8, 8, 4, 8, 8,
-    8, 8, 4, 8, 8,
-    8, 8, 4, 8, 8,
-    8, 8, 8, 4, 8,
+  8, 8, 4, 8, 8,
+  8, 8, 4, 8, 8,
+  8, 8, 4, 8, 8,
+  8, 8, 8, 4, 8,
 
-    8, 8, 4, 8, 8,
-    4, 8, 4, 8,
-    8, 8, 4, 8, 8,
-    8, 8, 2, 2,
+  8, 8, 4, 8, 8,
+  4, 8, 4, 8,
+  8, 8, 4, 8, 8,
+  8, 8, 2, 2,
 
-    4, 8,
-    //Rpeat of First Part
-    8, 8, 4, 8, 8,
-    8, 8, 4, 8, 8,
-    8, 8, 2, 8,
+  4, 8,
+  //Rpeat of First Part
+  8, 8, 4, 8, 8,
+  8, 8, 4, 8, 8,
+  8, 8, 2, 8,
 
-    8, 8, 4, 8, 8,
-    8, 8, 4, 8, 8,
-    8, 8, 4, 8, 8,
-    8, 8, 2, 8,
+  8, 8, 4, 8, 8,
+  8, 8, 4, 8, 8,
+  8, 8, 4, 8, 8,
+  8, 8, 2, 8,
 
-    8, 8, 4, 8, 8,
-    8, 8, 4, 8, 8,
-    8, 8, 4, 8, 8,
-    8, 8, 8, 4, 8,
+  8, 8, 4, 8, 8,
+  8, 8, 4, 8, 8,
+  8, 8, 4, 8, 8,
+  8, 8, 8, 4, 8,
 
-    8, 8, 4, 8, 8,
-    4, 8, 4, 8,
-    8, 8, 4, 8, 8,
-    8, 8, 2, 2,
-    //End of Repeat
+  8, 8, 4, 8, 8,
+  4, 8, 4, 8,
+  8, 8, 4, 8, 8,
+  8, 8, 2, 2,
+  //End of Repeat
 
-    4, 8, 2, 4, 8, 2,
-    8, 8, 8, 8, 8, 8, 8, 8, 2,
-    4, 8, 2, 4, 8, 2,
-    8, 8, 8, 8, 8, 1,
+  4, 8, 2, 4, 8, 2,
+  8, 8, 8, 8, 8, 8, 8, 8, 2,
+  4, 8, 2, 4, 8, 2,
+  8, 8, 8, 8, 8, 1,
 
-    4, 8, 2, 4, 8, 2,
-    8, 8, 8, 8, 8, 8, 8, 8, 2,
-    4, 8, 2, 4, 8, 2,
-    8, 8, 8, 8, 8, 1};
+  4, 8, 2, 4, 8, 2,
+  8, 8, 8, 8, 8, 8, 8, 8, 2,
+  4, 8, 2, 4, 8, 2,
+  8, 8, 8, 8, 8, 1
+};
+
+int alarmNotes[] = {
+  NOTE_CS6, REST, NOTE_CS6, REST, NOTE_CS6, REST, NOTE_CS6, REST, NOTE_CS6, REST, NOTE_CS6, REST, NOTE_CS6, REST, NOTE_CS6, REST, NOTE_CS6, REST, NOTE_CS6, REST, NOTE_CS6, REST, NOTE_CS6, REST, NOTE_CS6,
+};
+
+int alarmDurations[] = {
+  4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+};
 
 void setup()
 {
-  Serial.begin(115200); // set baud rate to 9600
+  Serial.begin(115200); // set baud rate to 115200
 
   mylcd.init();
   mylcd.backlight(); // initialize LCD
   // LCD shows "passcord:" at first row and column
-  mylcd.setCursor(1 - 1, 1 - 1);
-  mylcd.print("Welcome Home");
+  mylcd.setCursor(0, 0);
+  mylcd.print("Welcome Home!");
 
   servo_9.attach(9);   // make servo connect to digital 9
   servo_10.attach(10); // make servo connect to digital 10
@@ -215,12 +297,8 @@ void loop(){
     }
     
     if(buzzer.getState() == BUZZER_IDLE && playingMusic) {
-      playingMusic = false;      
-      String returnMessage;
-      returnMessage = 3;
-      returnMessage += ",";
-      returnMessage += "FIN";
-      Serial.println(returnMessage);      
+      playingMusic = false;
+      sendToSerial("3,FIN");
     }
     
     while(!Serial.available() && buzzer.getState() == BUZZER_IDLE){
@@ -229,28 +307,29 @@ void loop(){
 
 }
 
-void musicPlayer(String songID){
+void sendToSerial(char* msg) {
+  Serial.println(msg);
+}
+
+void musicPlayer(String &songID){
+  if (buzzer.getState() != BUZZER_IDLE) {
+    return;
+  }
+
   if (songID == "pirate") {
-    if (buzzer.getState() == BUZZER_IDLE) {
-        buzzer.playMelody(pirateNotes, pirateDurations, sizeof(pirateNotes) / 2);
-        playingMusic = true;
-        String returnMessage;
-        returnMessage = 3;
-        returnMessage += ",";
-        returnMessage += "none";
-        Serial.println(returnMessage);
-        returnMessage = 3;
-        returnMessage += ",";
-        returnMessage += "pirate";
-        Serial.println(returnMessage);
-        return;
-    }
-  }  
-  String returnMessage;
-  returnMessage = 3;
-  returnMessage += ",";
-  returnMessage += "none";
-  Serial.println(returnMessage);
+      buzzer.playMelody(pirateNotes, pirateDurations, sizeof(pirateNotes) / 2);
+      playingMusic = true;
+      sendToSerial("3,none");
+      sendToSerial("3,pirate");
+      return;
+  } else if (songID == "alarm") {
+      buzzer.playMelody(alarmNotes, alarmDurations, sizeof(alarmNotes) / 2);
+      playingMusic = true;
+      sendToSerial("3,none");
+      sendToSerial("3,alarm");
+      return;
+  }
+  sendToSerial("3,none");
 }
 
 void sensorChecker(){
@@ -259,49 +338,47 @@ void sensorChecker(){
   previousSteam = analogRead(A3);
   previousSoil = analogRead(A2);
   previousGas = analogRead(A0);
+
+  char buff[30] = "";
+  char valueBuff[10] = "";
+
   delay(500);
   if (abs(previousPhotocell-analogRead(A1)) > 200){
-  String returnMessage;
-    returnMessage = "8";
-    returnMessage += ",";
-    returnMessage += analogRead(A1);
-    Serial.println(returnMessage);
+    strcpy(buff, "8,");
+    itoa(analogRead(A1), valueBuff, 10);
+    strcat(buff, valueBuff);
+    sendToSerial(buff);
   }
   
   if (digitalRead(2) != previousMotion){
-  String returnMessage;
-      returnMessage = 2;
-      returnMessage += ",";
-      returnMessage += digitalRead(2);
-      Serial.println(returnMessage);
+    strcpy(buff, "2,");
+    strcat(buff, digitalRead(2) ? "1023" : "0");
+    sendToSerial(buff);
   }
   
 
   if (abs(previousSteam-analogRead(A3)) > 200){
-  String returnMessage;
-    returnMessage = "6";
-    returnMessage += ",";
-    returnMessage += analogRead(A3);
-    Serial.println(returnMessage);
+    strcpy(buff, "6,");
+    itoa(analogRead(A3), valueBuff, 10);
+    strcat(buff, valueBuff);
+    sendToSerial(buff);
   }
 
   
 
   if (abs(previousSoil-analogRead(A2)) > 100){
-  String returnMessage;
-    returnMessage = "4";
-    returnMessage += ",";
-    returnMessage += analogRead(A2);
-    Serial.println(returnMessage);
+    strcpy(buff, "4,");
+    itoa(analogRead(A2), valueBuff, 10);
+    strcat(buff, valueBuff);
+    sendToSerial(buff);
   }
 
 
   if (abs(previousGas-analogRead(A0)) > 100){
-    String returnMessage;
-    returnMessage = "1";
-    returnMessage += ",";
-    returnMessage += analogRead(A0);
-    Serial.println(returnMessage);
+    strcpy(buff, "1,");
+    itoa(analogRead(A0), valueBuff, 10);
+    strcat(buff, valueBuff);
+    sendToSerial(buff);
   }
 
 }
@@ -359,28 +436,24 @@ void stateChange(int pin, String state, String state2)
     lightControl(pin, state.toInt());
     break;
   case 99:
-    if (state2.toInt() == -1) {
+    if (state2 == "" || state2.toInt() == -1) {
       screenControl(state.toInt());
     } else {
-      screenControl(state.toInt(), state2);
+      char screenTextBuff[16] = "";
+      strncpy(screenTextBuff, state2.c_str(), 16);
+      screenTextBuff[16] = '\0';
+      screenControl(state.toInt(), screenTextBuff);
     }
     break;
   }
 }
 
-void buzzerControl(int duration, int frequency){
-  tone(3, frequency);
-  delay(duration);
-  noTone(3);
-}
-
-void writeScreen(String text) {
+void writeScreen(char* text) {
   mylcd.setCursor(0, 1);
   mylcd.print(text);
 }
 
-void screenControl(int state, String text){
-  String returnMessage;
+void screenControl(int state, char* text){
   if (state != -1) {
     if (state == 255) {
       screenOff = false;
@@ -389,9 +462,7 @@ void screenControl(int state, String text){
     }
   }  
 
-  if (text != "") {
-    currDisplayText = text;
-  }
+  currDisplayText = text;
   
   if (screenOff)
   {
@@ -406,122 +477,110 @@ void screenControl(int state, String text){
   mylcd.setCursor(1 - 1, 1 - 1);
   mylcd.print(currDisplayText);
 
-  returnMessage = "99";
-  returnMessage += ",";
-  returnMessage += screenOff ? "0" : "255";
-  returnMessage += ",";
-  returnMessage += currDisplayText;
-  Serial.println(returnMessage);
+  char buff[30] = "";
+  strcpy(buff, "99,");
+  strcat(buff, screenOff ? "0" : "255");
+  strcat(buff, ",");
+  strcat(buff, currDisplayText);
+
+  sendToSerial(buff);
 }
 
 void lightControl(int pin, int state)
 {
-  String returnMessage;
+  char buff[30] = "";
+  char valueBuff[10] = "";
+
   if (state == 255)
   {
     digitalWrite(pin, HIGH);
-    if(digitalRead(pin) == HIGH){
-      returnMessage = pin;
-      returnMessage += ",";
-      returnMessage += state;
-      Serial.println(returnMessage);
-    }
 
   }
   else
   {
     digitalWrite(pin, LOW);
-    if(digitalRead(pin) == LOW){
-      returnMessage = pin;
-      returnMessage += ",";
-      returnMessage += state;
-      Serial.println(returnMessage);
-    }
   }
+
+  if (digitalRead(pin) == HIGH) {
+    itoa(pin, buff, 10);
+    strcat(buff, ",255");
+    sendToSerial(buff);
+    return;
+  }
+
+  itoa(pin, buff, 10);
+  strcat(buff, ",0");
+  sendToSerial(buff); 
 }
 
 void windowControl(int state, int lockedState)
 {
-  String returnMessage;
+  char buff[30] = "";
+
   if(lockedState != -1){
     windowLock = lockedState;
-    Serial.print("lockedState = ");
-    Serial.println(lockedState);
-    Serial.print("doorLock = ");
-    Serial.println(doorLock);
-
   }
+
   if (windowLock == 1)
   {
     writeScreen("Error. Locked!");
     delay(1000);
     writeScreen("Welcome home!");
-    returnMessage = "10";
-    returnMessage += ",";
-    returnMessage += state;
-    returnMessage += ",";
-    returnMessage += "255";
-    Serial.println(returnMessage);
+
+    strcpy(buff, "9,");
+    strcat(buff, windowOpen ? "255" : "0");
+    strcat(buff, ",255");
+    sendToSerial(buff);
   }
   else if (windowLock == 0)
   {
     if(state != -1){
-      if(state == 255){
-        servo_10.write(120);
-      }
-      else{
-        servo_10.write(0);
-      }
+      windowOpen = state == 255;
     }
-    returnMessage = "10";
-    returnMessage += ",";
-    returnMessage += state;
-    returnMessage += ",";
-    returnMessage += "0";
-    Serial.println(returnMessage);
+
+    servo_9.write(windowOpen ? 255 : 0);
+    strcpy(buff, "9,");
+    strcat(buff, windowOpen ? "255" : "0");
+    strcat(buff, ",0");
+    sendToSerial(buff);
   }
 }
 
 void doorControl(int state, int lockedState)
 {
-  String returnMessage;
+  char buff[30] = "";
+
   if(lockedState != -1){
     doorLock = lockedState;
-    Serial.print("lockedState = ");
-    Serial.println(lockedState);
-    Serial.print("doorLock = ");
-    Serial.println(doorLock);
-
   }
+
   if (doorLock == 1)
   {
     writeScreen("Error. Locked!");
     delay(1000);
     writeScreen("Welcome home!");
-    returnMessage = "9";
-    returnMessage += ",";
-    returnMessage += state;
-    returnMessage += ",";
-    returnMessage += "255";
-    Serial.println(returnMessage);
+
+    strcpy(buff, "9,");
+    strcat(buff, doorOpen ? "255" : "0");
+    strcat(buff, ",255");
+    sendToSerial(buff);
   }
   else if (doorLock == 0)
   {
     if(state != -1){
-      servo_9.write(state);
+      doorOpen = state == 255;
     }
-    returnMessage = "9";
-    returnMessage += ",";
-    returnMessage += state;
-    returnMessage += ",";
-    returnMessage += "0";
-    Serial.println(returnMessage);
+
+    servo_9.write(doorOpen ? 255 : 0);
+    strcpy(buff, "9,");
+    strcat(buff, doorOpen ? "255" : "0");
+    strcat(buff, ",0");
+    sendToSerial(buff);
   }
 }
 
 void fanControl(int state, int rotation)
 {
-  String returnMessage;
   if(rotation != -1) {
     if (rotation == 255) {
       fanReverse = true;
@@ -542,43 +601,19 @@ void fanControl(int state, int rotation)
     if (fanReverse) {
       digitalWrite(7, HIGH);
       digitalWrite(6, LOW);
-      returnMessage = "7";
-      returnMessage += ",";
-      returnMessage += "255";
-      returnMessage += ",";
-      returnMessage += "255";
-      Serial.println(returnMessage);      
+      sendToSerial("7,255,255");
     } else {
       digitalWrite(7, LOW);
       digitalWrite(6, HIGH);
-      returnMessage = "7";
-      returnMessage += ",";
-      returnMessage += "255";
-      returnMessage += ",";
-      returnMessage += "0";
-      Serial.println(returnMessage);
+      sendToSerial("7,255,0");
     }
   } else {
     digitalWrite(7, LOW);
     digitalWrite(6, LOW);
-    returnMessage = "7";
-    returnMessage += ",";
-    returnMessage += "0";
-    returnMessage += ",";
-    returnMessage += fanReverse ? "255": "0";
-    Serial.println(returnMessage);
+    char buff[30] = "";
+    strcpy(buff, "7,0,");
+    strcat(buff, fanReverse ? "255" : "0");
+
+    sendToSerial(buff);
   }
-
-  if ((state == 255) && (rotation == 255))
-  {
-
-  }
-  else if ((state == 255) && (rotation == 0))
-  {
-
-  }
-  else if (((state == 0) && (rotation == 0)) || (state == 0) && (rotation == 255))
-  {
-
-  }  
 }
