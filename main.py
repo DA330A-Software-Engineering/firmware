@@ -9,6 +9,7 @@ from src.server.server_connector import ServerConnector
 import yaml  # type: ignore
 from tornado.ioloop import IOLoop
 from concurrent.futures import ThreadPoolExecutor
+from collections import deque
 
 executor = ThreadPoolExecutor(max_workers=1)  # spawn only 1 thread
 

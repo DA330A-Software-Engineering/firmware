@@ -527,7 +527,7 @@ void windowControl(int state, int lockedState)
     delay(1000);
     writeScreen("Welcome home!");
 
-    strcpy(buff, "9,");
+    strcpy(buff, "10,");
     strcat(buff, windowOpen ? "255" : "0");
     strcat(buff, ",255");
     sendToSerial(buff);
@@ -538,8 +538,8 @@ void windowControl(int state, int lockedState)
       windowOpen = state == 255;
     }
 
-    servo_9.write(windowOpen ? 255 : 0);
-    strcpy(buff, "9,");
+    servo_10.write(windowOpen ? 255 : 0);
+    strcpy(buff, "10,");
     strcat(buff, windowOpen ? "255" : "0");
     strcat(buff, ",0");
     sendToSerial(buff);
