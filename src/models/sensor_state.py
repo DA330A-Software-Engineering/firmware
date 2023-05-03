@@ -6,7 +6,7 @@ from src.models.json_serializable import JsonSerializable
 @dataclass
 class SensorState(JsonSerializable):
     id: str
-    state: dict[str, str]
+    state: int | str
 
     @staticmethod
     def from_json(json_data: str) -> "SensorState":

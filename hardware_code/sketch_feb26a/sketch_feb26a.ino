@@ -273,6 +273,12 @@ void setup()
   pinMode(12, OUTPUT); // set digital 12 to output
   pinMode(5, OUTPUT);  // set digital 5 to output
   pinMode(3, OUTPUT);  // set digital 3 to output
+
+  previousPhotocell = analogRead(A1);
+  previousMotion = digitalRead(2);
+  previousSteam = analogRead(A3);
+  previousSoil = analogRead(A2);
+  previousGas = analogRead(A0);
   
 }
 
@@ -333,23 +339,18 @@ void musicPlayer(String &songID){
 }
 
 void sensorChecker(){
-  previousPhotocell = analogRead(A1);
-  previousMotion = digitalRead(2);
-  previousSteam = analogRead(A3);
-  previousSoil = analogRead(A2);
-  previousGas = analogRead(A0);
 
   char buff[30] = "";
   char valueBuff[10] = "";
 
-  delay(500);
-  if (abs(previousPhotocell-analogRead(A1)) > 200){
+  delay(100);
+  if (abs(previousPhotocell-analogRead(A1)) > 100){
     strcpy(buff, "8,");
     itoa(analogRead(A1), valueBuff, 10);
     strcat(buff, valueBuff);
     sendToSerial(buff);
   }
-  
+
   if (digitalRead(2) != previousMotion){
     strcpy(buff, "2,");
     strcat(buff, digitalRead(2) ? "1023" : "0");
@@ -357,7 +358,7 @@ void sensorChecker(){
   }
   
 
-  if (abs(previousSteam-analogRead(A3)) > 200){
+  if (abs(previousSteam-analogRead(A3)) > 100){
     strcpy(buff, "6,");
     itoa(analogRead(A3), valueBuff, 10);
     strcat(buff, valueBuff);
@@ -380,6 +381,12 @@ void sensorChecker(){
     strcat(buff, valueBuff);
     sendToSerial(buff);
   }
+
+  previousPhotocell = analogRead(A1);
+  previousMotion = digitalRead(2);
+  previousSteam = analogRead(A3);
+  previousSoil = analogRead(A2);
+  previousGas = analogRead(A0);
 
 }
 
