@@ -9,6 +9,7 @@ from src.server.server_connector import ServerConnector
 import yaml  # type: ignore
 from tornado.ioloop import IOLoop
 from concurrent.futures import ThreadPoolExecutor
+from collections import deque
 
 executor = ThreadPoolExecutor(max_workers=1)  # spawn only 1 thread
 
@@ -21,7 +22,7 @@ def main() -> None:
     def send_sensor_data(pin: int, value: str):
         print(f"[SENSOR STATE CHANGE] pin: {pin}, val: {value}")
         sensor_id = list(server.pin_map.keys())[list(server.pin_map.values()).index(pin)]
-        server.send_sensor_update(SensorState(sensor_id, {"value": value}))
+        server.send_sensor_update(SensorState(sensor_id, value))
 
     hardware = HardwareConnector(config["Serial"], on_send=send_sensor_data)
     # hardware.listen_for_sensor_updates()

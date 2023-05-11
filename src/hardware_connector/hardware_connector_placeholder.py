@@ -1,3 +1,4 @@
+from threading import Lock
 from src.models.device_types import DeviceType
 from src.models.device_state import DeviceState
 from typing import Callable
@@ -16,6 +17,7 @@ class HardwareConnector:
             timeout=float(self.config["timeout"]),
         )
         self.action_in_progress = False
+        self.lock = Lock()
         # self.sensor_thread = threading.Thread(target=self.listen_for_sensor_updates)
         # self.sensor_thread.daemon = True
         # self.is_sensor_thread_running = False
@@ -34,20 +36,17 @@ class HardwareConnector:
         # Compile into "pin, attr1, attr2, attr3 ..." str with attr being -1 if not present
         state_str = ",".join([str(pin)] + state_list)
         print(state_str)
+        
+        with self.lock:
+            # Send comma string to serial
+            self.serial.write(state_str.encode())
+            # self.on_send(state_str)
 
-        # Send comma string to serial
-        self.serial.write(state_str.encode())
-        # self.on_send(state_str)
-
-        self.action_in_progress = True
-
-        # Receive or get state to check it has updated correctly
-        response = self.serial.readline().decode().strip()
-        while pin != response[:2] and pin != response[:1]:
-            time.sleep(0.5)
+            # Receive or get state to check it has updated correctly
             response = self.serial.readline().decode().strip()
-
-        self.action_in_progress = False
+            while pin != response[:2] and pin != response[:1]:
+                time.sleep(0.1)
+                response = self.serial.readline().decode().strip()
 
         new_set_state = DeviceState.from_list(response.split(",")[1:], deviceType)
 
@@ -79,7 +78,7 @@ class HardwareConnector:
 
     def listen_for_sensor_updates(self, loop: IOLoop):
         while True:
-            if self.action_in_progress:
+            if self.lock.locked():
                 continue
 
             response = self.serial.readline().decode().strip()

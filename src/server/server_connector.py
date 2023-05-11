@@ -1,3 +1,4 @@
+from collections import deque
 from src.models.sensor_state import SensorState
 from src.server.constants import (
     CFG_SOCKETS,
