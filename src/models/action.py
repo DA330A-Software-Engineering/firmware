@@ -15,7 +15,6 @@ class Action(JsonSerializable, object):
     @staticmethod
     def from_json(json_data: str) -> Action:
         data_dict = json.loads(json_data)
-        print(data_dict["type"])
         device_type = DeviceType.from_str(data_dict["type"])
 
         state_object = data_dict["state"]
