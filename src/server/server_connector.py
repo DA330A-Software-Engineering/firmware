@@ -1,4 +1,5 @@
 from collections import deque
+import json
 from src.models.sensor_state import SensorState
 from src.server.constants import (
     CFG_SOCKETS,
@@ -32,9 +33,13 @@ class ServerConnector:
     def add_action_listener(self, action_socket_listener: Callable[[Action], HardwareReply]):
         def wrapper(action_json: str):
             print(f"[ACTION LISTENER] action: {action_json}")
-            action = Action.from_json(action_json)
-            response = action_socket_listener(action)
-            self.send_response(response)
+            try:
+                action = Action.from_json(action_json)
+                response = action_socket_listener(action)
+                self.send_response(response)
+            except TypeError:
+                data_dict = json.loads(action_json)
+                self.send_response(HardwareReply(data_dict['id'], False))
 
         self.action_socket.add_on_message_listener(lambda msg: wrapper(msg))
 
